@@ -50,7 +50,7 @@ private:
     void rawDataFinalyCheck(void);
     void rawDataOutputNewFile(void);
     QString getNetIP(void);
-
+    BaseDBHandler * dbHandler;
     QList<meas_point_raw_data_t *> measPointList;
 };
 

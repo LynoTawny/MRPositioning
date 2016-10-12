@@ -8,8 +8,9 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <position_cal/field_func.h>
+#include <basedbhandler.h>
 
-#define TIME_BUF_LEN 20
+#define TIME_BUF_LEN 32
 
 struct _base_meas
 {
@@ -74,11 +75,14 @@ public:
     void setOurPositioningResult(double lng, double lat, double x, double y);
     void getOurPositioningResult(double *lng, double *lat, double *x, double *y);
 
+    void setBaseDBHandler(BaseDBHandler *handler);
+
 public slots:
     void coordTransformFinishedSlot(QNetworkReply *reply);//将wgs84经纬度转换为bd09经纬度完成槽函数
     void queryBaseInfoFinishedSlot(QNetworkReply *reply);//查询基站信息完成槽函数
 
 private:
+    BaseDBHandler *dbHandler;
     QString postStr;
     QString time;
     int line;

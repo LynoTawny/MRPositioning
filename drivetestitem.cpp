@@ -156,7 +156,7 @@ void DriveTestItem::queryBaseInfoFinishedSlot(QNetworkReply *reply)
 
     if(reply->error() != QNetworkReply::NoError)
     {
-        qDebug() << "LINE:" << __LINE__ << "; network error code:" << reply->errorString();
+        qDebug() << "FILE:" << __FILE__  << "; LINE:" << __LINE__ << "; network error code:" << reply->errorString();
         return;
     }
 
@@ -233,12 +233,30 @@ void DriveTestItem::queryBaseInformation(void)
     QNetworkReply *reply;
     for(int i = 0; i < this->result_cnt; i++)
     {
+        int mcc = 460;
+        int mnc = 1;
+        int lac = this->results.at(i).base_meas_rslt.lac;
+        int ci = this->results.at(i).base_meas_rslt.ci;
+        double lng, lat;
+        if(dbHandler->queryBaseInfo(mcc,mnc,lac,ci,&lng,&lat,NULL))
+        {
+            base_info_t base_info;
+            base_info.lat = lat;
+            base_info.lng = lng;
+            base_info.radius = -1;
+
+            base_infos.append(base_info);
+
+            qDebug() << "FILE:" << __FILE__ << "; LINE:" << __LINE__ << "; query data base success.";
+            continue;
+        }
+
         QString urlStr;
         urlStr.append("http://api.cellocation.com/cell/");
         urlStr.append(QString("?mcc=%1").arg("460"));
         urlStr.append(QString("&mnc=%1").arg("1"));
-        urlStr.append(QString("&lac=%1").arg(this->results.at(i).base_meas_rslt.lac));
-        urlStr.append(QString("&ci=%1").arg(this->results.at(i).base_meas_rslt.ci));
+        urlStr.append(QString("&lac=%1").arg(lac));
+        urlStr.append(QString("&ci=%1").arg(ci));
         urlStr.append(QString("&coord=%1&output=json").arg("bd09"));
 
 //        qDebug() << urlStr;
@@ -246,14 +264,20 @@ void DriveTestItem::queryBaseInformation(void)
         QNetworkRequest query_base_info(QUrl(urlStr.toLatin1()));
         reply = this->base_query_manager->get(query_base_info);
 
-        qDebug() << "LINE:" << __LINE__ << "; waiting reply.";
+        qDebug() << "FILE:" << __FILE__ << "; LINE:" << __LINE__ << "; waiting reply.";
         QEventLoop eventLoop;
         QObject::connect(this->base_query_manager, SIGNAL(finished(QNetworkReply *)), &eventLoop, SLOT(quit()));
         eventLoop.exec();
 
         queryBaseInfoFinishedSlot(reply);
-        qDebug() << "LINE:" << __LINE__ << "; query base info done.";
+        qDebug() << "FILE:" << __FILE__ << "; LINE:" << __LINE__ << "; query base info done.";
 
+        base_info_t tmp = base_infos.last();
+        BaseInfo base;
+        base.setBaseID(mcc, mnc, lac, ci);
+        QString type("bd09");
+        base.setBasePos(tmp.lng, tmp.lat, type);
+        dbHandler->insertBaseInfo(base);
 //        break;
     }
 
@@ -401,4 +425,9 @@ void DriveTestItem::getOurPositioningResult(double *lng, double *lat, double *x,
     *lat = this->our_lat;
     *x = this->our_pos_x;
     *y = this->our_pos_y;
+}
+
+void DriveTestItem::setBaseDBHandler(BaseDBHandler *handler)
+{
+    this->dbHandler = handler;
 }

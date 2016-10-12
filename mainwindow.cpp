@@ -32,8 +32,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     qDebug() << getNetIP();
 
-    //BaseDBHandler * dbHandler = new BaseDBHandler;
-
+    QString dbPath("D:/MR Sample/DriveTest/base.db");
+    this->dbHandler = new BaseDBHandler(dbPath);
+    this->dbHandler->openBaseDB();
 }
 
 MainWindow::~MainWindow()
@@ -64,6 +65,7 @@ void MainWindow::on_drTstRsltBtn_clicked()
     while(!line.isEmpty())
     {
         DriveTestItem *item = new DriveTestItem(n, line);
+        item->setBaseDBHandler(this->dbHandler);
         itemList.append(item);
         line = in.readLine();
         n++;
@@ -393,6 +395,9 @@ void MainWindow::rawDataRead(void)
         return;
     }
 
+    QDate date = QDate::currentDate();
+    QString dateStr = date.toString("yyyy-MM-dd");
+
     QTextStream in(&file);
     QString line = in.readLine();
     int no = 1;
@@ -403,8 +408,11 @@ void MainWindow::rawDataRead(void)
         meas_point_raw_data_t * p_data = (meas_point_raw_data_t *)malloc(sizeof(meas_point_raw_data_t) +
                                                                      cellCnt * sizeof(cell_raw_data_t));
         p_data->no = no;
-        QString time = strList.at(0).remove('"');
-        strncpy(p_data->time, time.toLatin1().data(), TIME_BUF_LEN - 1);
+        QString time = strList.at(0);
+        time.remove('"');
+        QString dateTime = dateStr + " " + time;
+
+        strncpy(p_data->time, dateTime.toLatin1().data(), TIME_BUF_LEN - 1);
         p_data->cell_count = cellCnt;
         for(int i = 0; i < cellCnt; i++)
         {
@@ -541,7 +549,7 @@ void MainWindow::rawDataOutputNewFile(void)
         meas_point_raw_data_t *p = *it;
         QString str;
 
-        str.append(QString("%1|").arg(p->no));
+        //str.append(QString("%1|").arg(p->no));
         str.append(QString(p->time));
         str.append("|");
         for(int i = 0; i < p->cell_count; i++)
