@@ -371,6 +371,19 @@ void MainWindow::on_outVsTrueBtn_clicked()
 
 void MainWindow::on_preprocessBtn_clicked()
 {
+    rawDataRead();
+    rawDataFiltrate();
+    rawDataFill();
+    rawDataOutputNewFile();
+}
+
+void MainWindow::rawDataFill(void)
+{
+
+}
+
+void MainWindow::rawDataRead(void)
+{
     QString rawDataFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "D:/MR Sample/DriveTest");
 
     QFile file(rawDataFilePath);
@@ -390,6 +403,8 @@ void MainWindow::on_preprocessBtn_clicked()
         meas_point_raw_data_t * p_data = (meas_point_raw_data_t *)malloc(sizeof(meas_point_raw_data_t) +
                                                                      cellCnt * sizeof(cell_raw_data_t));
         p_data->no = no;
+        QString time = strList.at(0).remove('"');
+        strncpy(p_data->time, time.toLatin1().data(), TIME_BUF_LEN - 1);
         p_data->cell_count = cellCnt;
         for(int i = 0; i < cellCnt; i++)
         {
@@ -412,37 +427,142 @@ void MainWindow::on_preprocessBtn_clicked()
 //        if(no > 50) break;
     }
 
+    file.close();
     qDebug() << "LINE:" << __LINE__ << "; read raw data file done.";
 
-    meas_point_raw_data_t *test = measPointList.last();
-    qDebug() << "line:" << test->no;
-    for(int i = 0; i < test->cell_count; i++)
+//    meas_point_raw_data_t *test = measPointList.last();
+//    qDebug() << "line:" << test->no;
+//    for(int i = 0; i < test->cell_count; i++)
+//    {
+//        qDebug() << "cell" << i << ":" << test->cell_list[i].lac << ","
+//                 << test->cell_list[i].ci << ","
+//                 << test->cell_list[i].arfcn << ","
+//                 << test->cell_list[i].bsic << ","
+//                 << test->cell_list[i].rxlev;
+//    }
+}
+
+bool isCellRawDataValid(cell_raw_data_t *p)
+{
+    if(-1 == p->rxlev)
     {
-        qDebug() << "cell" << i << ":" << test->cell_list[i].lac << ","
-                 << test->cell_list[i].ci << ","
-                 << test->cell_list[i].arfcn << ","
-                 << test->cell_list[i].bsic << ","
-                 << test->cell_list[i].rxlev;
+        return false;
     }
 
+    if(((-1 == p->lac) || (-1 == p->ci)) && ((-1 == p->arfcn) || (-1 == p->bsic)))
+    {
+        return false;
+    }
+
+    return true;
 }
 
-void MainWindow::rawDataFill(void)
+bool isCellRawDataCorrect(cell_raw_data_t *p)
 {
+    int *tmp = (int *)p;
+    for(int i = 0; i < sizeof(cell_raw_data_t)/sizeof(int); i++)
+    {
+        if(*tmp ++ == -1)
+        {
+            return false;
+        }
+    }
 
-}
-
-void MainWindow::rawDataRead(void)
-{
-
+    return true;
 }
 
 void MainWindow::rawDataFiltrate(void)
 {
+    for(QList<meas_point_raw_data_t *>::iterator it = measPointList.begin();
+        it != measPointList.end(); it++)
+    {
+        meas_point_raw_data_t *p = *it;
 
+        //如果该测量点主服务小区数据残缺，扔掉该测量点
+//        if(!isCellRawDataValid(&p->cell_list[0]))
+        if(!isCellRawDataCorrect(&p->cell_list[0]))
+        {
+            free(p);
+            measPointList.erase(it);
+            continue;
+        }
+
+        //先保存测量点中有效的基站测量结果到vector
+        QVector<cell_raw_data_t> vector;
+        vector.append(p->cell_list[0]);
+        for(int i = 1; i < p->cell_count; i++)
+        {
+//            if(isCellRawDataValid(&p->cell_list[i]))
+            if(isCellRawDataCorrect(&p->cell_list[i]))
+            {
+                vector.append(p->cell_list[i]);
+            }
+        }
+
+        //测量点中基站数目不够，删掉测量点
+        if(vector.count() < 3)
+        {
+            free(p);
+            measPointList.erase(it);
+            continue;
+        }
+
+        //分配空间保存有效的基站测量结果
+        meas_point_raw_data_t * p_data = (meas_point_raw_data_t *)malloc(sizeof(meas_point_raw_data_t) +
+                                                                     vector.count() * sizeof(cell_raw_data_t));
+        p_data->no = p->no;
+        strncpy(p_data->time, p->time, TIME_BUF_LEN - 1);
+        p_data->cell_count = vector.count();
+        for(int i = 0; i < vector.count(); i++)
+        {
+            p_data->cell_list[i] = vector.at(i);
+        }
+
+        //替换链表中的元素
+        *it = p_data;
+        free(p);
+    }
 }
 
 void MainWindow::rawDataOutputNewFile(void)
 {
+    QFile file(QString("D:/MR Sample/DriveTest/PreprocessOK.txt"));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        qDebug() << "fail to open write only file.";
+        return;
+    }
 
+    QTextStream out(&file);
+    out << "preprocess complete\n";
+    for(QList<meas_point_raw_data_t *>::iterator it = measPointList.begin();
+        it != measPointList.end(); it ++)
+    {
+        meas_point_raw_data_t *p = *it;
+        QString str;
+
+        str.append(QString("%1|").arg(p->no));
+        str.append(QString(p->time));
+        str.append("|");
+        for(int i = 0; i < p->cell_count; i++)
+        {
+            str.append(QString("%1,").arg(p->cell_list[i].lac));
+            str.append(QString("%1,").arg(p->cell_list[i].ci));
+            str.append(QString("%1,").arg(p->cell_list[i].arfcn));
+            str.append(QString("%1,").arg(p->cell_list[i].bsic));
+            str.append(QString("%1|").arg(p->cell_list[i].rxlev));
+        }
+        str.chop(1);
+        str.append("\n");
+        out << str;
+    }
+
+    file.close();
+    qDebug() << "write file done";
+}
+
+
+
+void MainWindow::rawDataFinalyCheck(void)
+{
 }

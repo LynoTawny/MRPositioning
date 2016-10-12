@@ -47,6 +47,7 @@ private:
     void rawDataRead(void);
     void rawDataFiltrate(void);
     void rawDataFill(void);
+    void rawDataFinalyCheck(void);
     void rawDataOutputNewFile(void);
     QString getNetIP(void);
 

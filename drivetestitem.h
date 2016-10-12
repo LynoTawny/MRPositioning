@@ -9,6 +9,8 @@
 #include <QNetworkReply>
 #include <position_cal/field_func.h>
 
+#define TIME_BUF_LEN 20
+
 struct _base_meas
 {
     int arfcn;
@@ -44,6 +46,7 @@ typedef struct
 typedef struct
 {
     int no;
+    char time[TIME_BUF_LEN];
     int cell_count;
     cell_raw_data_t cell_list[];
 }meas_point_raw_data_t;
