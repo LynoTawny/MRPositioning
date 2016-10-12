@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/html">
+        <file alias="map.html">res/map.html</file>
+        <file alias="mymap.html">res/BaiduMap.html</file>
+    </qresource>
+</RCC>
