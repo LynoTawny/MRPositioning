@@ -221,7 +221,7 @@ MatrixInt mat_6bs(60,3);
 
 double calc_2point_dist(double x1,double y1,double x2,double y2)
 {
-  return  (pow(x2-x1,2)+pow(y2-y1,2));
+  return  sqrt(pow(x2-x1,2)+pow(y2-y1,2));
 }
 
 void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorXd &ms_pos)
@@ -285,10 +285,13 @@ void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorX
      break;
   }
   printf("HHHHHHHHHHH 1\n");
+  
+  #define ANCHOR_COUNT 10000
 
   memset(inter_point_flag,0,sizeof(inter_point_flag));
   MatrixInt res_flag = MatrixInt::Zero(1,60);
   MatrixXd mid_res = MatrixXd::Zero(cal_cnt,2);
+  double two_bs_dist = 0;
   for(i=0;i<cal_cnt;i++)
   {
      m = matbs(i,0);
@@ -296,7 +299,12 @@ void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorX
      q = matbs(i,2);
      if(inter_point_flag[m][n] == 0)
      {
-      printf("HHHHHH,i = %d,[m,n,q]=[%d,%d,%d]\n",i,m,n,q);
+      two_bs_dist = calc_2point_dist(mat_circle(m,0),mat_circle(m,1),mat_circle(n,0),mat_circle(n,1));
+      if(two_bs_dist >= mat_circle(m,2) + mat_circle(n,2) + 500)
+      {
+          inter_point_flag[m][n] = ANCHOR_COUNT;
+          continue;
+      } 
       bs.row(0) = mat_circle.row(m);
       bs.row(1) = mat_circle.row(n);
       calc_circles_point(bs,mpoint);
@@ -305,11 +313,15 @@ void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorX
       mid_res.row(i) = mid_point.row(0);
       inter_point_flag[m][n] = i+1; 
      }
-     else
+     else if(inter_point_flag[m][n] != ANCHOR_COUNT)
      {
       printf("point flag =%d,i=%d\n",inter_point_flag[m][n],i);
       mid_res.row(i) = mid_res.row(inter_point_flag[m][n]-1); 
       mid_point = mid_res.row(inter_point_flag[m][n]-1);
+     }
+     else
+     {
+        continue;
      }
      for(j=0;j<2;j++)
      {
@@ -356,7 +368,7 @@ void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorX
    {
      m = matbs(i,0);
      n = matbs(i,1);
-     if((relation_arr[m][n] == 0)&&(inter_point_flag[m][n]==0))
+     if((relation_arr[m][n]==0)&& (mid_res(i,0) > 0)&&(inter_point_flag[m][n]==0))
      {
         total_used_point++;
         sum_x += mid_res(i,0);

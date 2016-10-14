@@ -37,6 +37,10 @@ private slots:
 
     void on_preprocessBtn_clicked();
 
+    void on_queryBtn_clicked();
+
+    void on_baseVsTrueBtn_clicked();
+
 private:
     Ui::MainWindow *ui;
     QList<DriveTestItem *> itemList;

@@ -74,6 +74,9 @@ void MainWindow::on_drTstRsltBtn_clicked()
     }
 
     qDebug() << "LINE:" << __LINE__ << "; read drive test file done.";
+
+//    QWebFrame * webFrame = ui->webView->page()->mainFrame();
+//    webFrame->evaluateJavaScript(QString("showTheLocaltion(\"114.426,34.527|117.554,36.446|119.852,30.554\",1);"));
 }
 
 void MainWindow::on_showBasePosBtn_clicked()
@@ -140,7 +143,7 @@ void MainWindow::on_apiPosBtn_clicked()
         points.append(QString::number(lat, 'g', 9));
         points.append("|");
     }
-
+    points.chop(1);
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
     webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
 
@@ -183,6 +186,7 @@ void MainWindow::on_ourPosBtn_clicked()
         points.append(QString::number(lat, 'g', 9));
         points.append("|");
     }
+    points.chop(1);
 
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
     webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
@@ -205,8 +209,10 @@ void MainWindow::on_truePosBtn_clicked()
         points.append("|");
     }
 
+    points.chop(1);
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
     webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",1)").arg(points));
+    //qDebug() << QString("showTheLocaltion(\"%1\",1)").arg(points);
 
 }
 
@@ -361,6 +367,11 @@ void MainWindow::on_outVsTrueBtn_clicked()
         str.append(QString::number(our_lat, 'g', 9));
         str.append("|");
 
+        str.append(QString::number(our_x, 'g', 9));
+        str.append(",");
+        str.append(QString::number(our_y, 'g', 9));
+        str.append("|");
+
 //        double distance = GetDistance(true_lng, true_lat, our_lng, our_lat);
         double distance = GetDistanceByXY(our_x, our_y, true_x, true_y);
         str.append(QString::number(distance, 'g', 9));
@@ -369,6 +380,35 @@ void MainWindow::on_outVsTrueBtn_clicked()
         i++;
     }
     ui->textBrowser->append("******************************************");
+
+#if 0
+    //打印基站xy
+    int index_point = 1, index_cell = 1;
+    foreach (DriveTestItem *item, itemList  )
+    {
+        QList<base_info_t> &base_infos = item->getBaseInfos();
+        foreach (base_info_t base, base_infos) {
+            str.clear();
+            str.append(QString("%1|%2|").arg(index_point).arg(index_cell));
+
+            str.append(QString::number(base.lng, 'g', 9));
+            str.append(",");
+            str.append(QString::number(base.lat, 'g', 9));
+            str.append("|");
+
+            str.append(QString::number(base.pos_x, 'g', 9));
+            str.append(",");
+            str.append(QString::number(base.pos_y, 'g', 9));
+            str.append("|");
+            ui->textBrowser->append(str);
+            index_cell ++;
+        }
+
+        index_point ++;
+        index_cell = 1;
+    }
+    ui->textBrowser->append("******************************************");
+#endif
 }
 
 void MainWindow::on_preprocessBtn_clicked()
@@ -573,4 +613,53 @@ void MainWindow::rawDataOutputNewFile(void)
 
 void MainWindow::rawDataFinalyCheck(void)
 {
+}
+
+void MainWindow::on_queryBtn_clicked()
+{
+    if(ui->textBrowser->isHidden())
+        ui->textBrowser->show();
+    else
+        ui->textBrowser->hide();
+
+}
+
+void MainWindow::on_baseVsTrueBtn_clicked()
+{
+    QMap<QString, base_info_t> baseMap;
+
+    foreach (DriveTestItem *item, itemList) {
+        QList<base_info_t> &base_infos = item->getBaseInfos();
+        QList<base_meas_t> &results = item->getResults();
+
+        if(results.count() != base_infos.count())
+        {
+            qDebug() << "FILE:" << __FILE__ << "LINE:" << __LINE__ << "count error";
+            continue;
+        }
+
+        int count = results.count();
+        for(int i = 0; i < count; i++)
+        {
+            QString str = QString("%1,%2").arg(results.at(i).base_meas_rslt.lac).arg(results.at(i).base_meas_rslt.ci);
+            baseMap.insert(str, base_infos.at(i));
+        }
+    }
+
+    QString points;
+    for(QMap<QString, base_info_t>::const_iterator it = baseMap.constBegin();
+        it != baseMap.constEnd(); it++)
+    {
+        points.append(QString::number(it.value().lng, 'g', 9));
+        points.append(",");
+        points.append(QString::number(it.value().lat, 'g', 9));
+        points.append("|");
+
+    }
+    points.chop(1);
+
+    QWebFrame * webFrame = ui->webView->page()->mainFrame();
+    webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
+
+    on_truePosBtn_clicked();
 }

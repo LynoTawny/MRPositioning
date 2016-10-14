@@ -7,7 +7,8 @@
 	body, html,#allmap {width: 100%;height: 100%;overflow: hidden;margin:0;font-family:"微软雅黑";}
 	</style>
         <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=ojST3jwr9LGTWTIwxak4z6hkE11N6yMx"></script>
-<script type="text/javascript" src="http://api.map.baidu.com/library/CurveLine/1.5/src/CurveLine.min.js"></script>
+        <script type="text/javascript" src="http://api.map.baidu.com/library/CurveLine/1.5/src/CurveLine.min.js"></script>
+        <script type="text/javascript" src="http://api.map.baidu.com/library/Polyline/1.5/src/Polyline.min.js"></script>
 	<title>地图展示</title>
 </head>
 <body>
@@ -29,6 +30,7 @@
 // 经纬度接口
 function showTheLocaltion(allpointinfo,type)
 {
+    //alert(allpointinfo);
     var pointArray = allpointinfo.split('|');
     for(var i=0;i<pointArray.length;i++)
     {
@@ -50,15 +52,20 @@ function showTheLocaltion(allpointinfo,type)
          }
            
          map.addOverlay(marker1);              // 将标注添加到地图中
-         var label = new BMap.Label(i+1,{offset:new BMap.Size(0,0)});
-
-         marker1.setLabel(label);
+         var label = new BMap.Label(i+1,{offset:new BMap.Size(20,-10)});
+	   marker1.setLabel(label);
          marker1.setTitle(pointvalue[0] + "," +pointvalue[1]);
          if(i == 0)
          {
               map.centerAndZoom(new BMap.Point(pointvalue[0],pointvalue[1]), mapShowLevel );  
          }
      }
+    
+    if(type == 1)
+    {
+        drawWalkArea(allpointinfo,type);
+    }
+
    
     //map.panTo(marker1);
     
@@ -73,26 +80,40 @@ function moveTheLocaltion(JD , WD)
 }
 
 //区域划线
-function drawWalkArea(allpointinfo)
+//type=1画蓝线，真实位置，type=0画红线
+function drawWalkArea(allpointinfo, type)
 {
       //assert(pointArray.length);
       //assert(pointArray.length);
-      var points = [];
-      var pointArray = allpointinfo.split('|');
-      for(var i=0;i<pointArray.length;i++)
+      //alert(allpointinfo);
+    var points = [];
+    var pointArray = allpointinfo.split('|');
+    for(var i=0;i<pointArray.length;i++)
+    {
+      pointvalue = pointArray[i].split(',');
+      if(pointvalue.length != 2)
       {
-          pointvalue = pointArray[i].split(',');
-          if(pointvalue.length != 2)
-          {
-             //格式出错
-             return 1;
-          }
-          p1 = new BMap.Point(pointvalue[0],pointvalue[1]);
-          points.push(p1);
+         //格式出错
+         return 1;
       }
+      p1 = new BMap.Point(pointvalue[0],pointvalue[1]);
+      points.push(p1);
+    }
+// CurveLine
 
-	var curve = new BMapLib.CurveLine(points, {strokeColor:"blue", strokeWeight:3, strokeOpacity:0.5}); //创建弧线对象
-	map.addOverlay(curve); //添加到地图中
+    var color;
+    if(type == 1)
+    {
+        color = "blue";
+    }
+    else if(type == 0)
+    {
+        color = "red";
+    }
+    var polyline = new BMap.Polyline(points , {strokeColor:color, strokeWeight:3, strokeOpacity:0.5}); 
+	//var curve = new BMapLib.Polyline(points, {strokeColor:"blue", //strokeWeight:3, strokeOpacity:0.5}); //创建弧线对象
+
+	map.addOverlay(polyline ); //添加到地图中
 	
 }
 
@@ -155,8 +176,10 @@ function toFixPoint(pointSet , type)
 //arrpoints.push(114.433304);
 //arrpoints.push(30.460344);
 //drawWalkArea(arrpoints);
-//teststr = "114.426,30.527|117.554,32.446|119.852,33.554";
+//teststr = "114.426,34.527|117.554,36.446|119.852,30.554";
 //showTheLocaltion(teststr);
 //toFixPoint(teststr  , 1);
+//showTheLocaltion("114.426,34.527|117.554,36.446|119.852,30.554",1);
+//showTheLocaltion("114.434859,30.4641974|114.434868,30.4650268|114.430991,30.4644528|114.430988,30.4639009|114.431541,30.4627856|114.43071,30.4625067|114.430156,30.4622288|114.429324,30.461945|114.42849,30.4622226|114.427102,30.4622248|114.42738,30.4613873|114.42738,30.4602747|114.427662,30.4594421|114.428762,30.4594465|114.431261,30.4591768|114.431256,30.4594513|114.431539,30.4597333|114.430984,30.4613931|114.43099,30.4622322|114.432366,30.4625147|114.432369,30.4627889|114.432651,30.463067|114.433482,30.4628009|114.434033,30.4630769|",1);
 
 </script>
