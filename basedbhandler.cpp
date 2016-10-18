@@ -27,14 +27,14 @@ bool BaseDBHandler::openBaseDB(void)
 {
     if(!this->db.open())
     {
-        qDebug() << "file:" << __FILE__ << "line" << "Database Error!";
+        qDebug() << "file:" << __FILE__ << "line" << __LINE__ << "Database Error!";
         return false;
     }
 
     QSqlQuery query;
     if (!query.exec(SQL_CREATE_TABLE))
     {
-        qDebug() << "file:" << __FILE__ << "line" << "Create Table Failed!";
+        qDebug() << "file:" << __FILE__ << "line" << __LINE__ << "Create Table Failed!";
         return false;
     }
 
@@ -63,7 +63,7 @@ bool BaseDBHandler::insertBaseInfo(BaseInfo &base)
     }
     else
     {
-        qDebug() << "file:" << __FILE__ << "line" << "inserted!";
+        qDebug() << "file:" << __FILE__ << "line" << __LINE__ << "inserted!";
         return true;
     }
 }
