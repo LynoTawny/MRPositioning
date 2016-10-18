@@ -224,7 +224,37 @@ double calc_2point_dist(double x1,double y1,double x2,double y2)
   return  sqrt(pow(x2-x1,2)+pow(y2-y1,2));
 }
 
-void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorXd &ms_pos)
+double calc_square_dist(VectorXd &p1,VectorXd &p2)
+{
+   return (pow(p1(0)-p2(0),2) + pow(p1(1) - p2(1),2));
+}
+
+double calc_total_ratio(MatrixXd &mat_circle,int bs_num,VectorXd &ms_pos)
+{
+   double sum_ratio = 0;
+   int i=0;
+   VectorXd p1(3);
+   double sum_x = 0;
+   double sum_y = 0;
+   VectorXd vec_ratio(bs_num);
+   double ratio;
+   for(i=0;i<bs_num;i++)
+   {
+      p1 = mat_circle.row(i);
+      ratio = 1/calc_square_dist(p1,ms_pos);
+      sum_ratio += ratio;
+      vec_ratio(i) = ratio;
+   }
+   for(i=0;i<bs_num;i++)
+   {
+     sum_x += mat_circle(i,0)*vec_ratio(i)/sum_ratio;
+     sum_y += mat_circle(i,1)*vec_ratio(i)/sum_ratio;
+   }
+   ms_pos(0) = sum_x;
+   ms_pos(1) = sum_y;
+}
+
+void alg_converge_calc(MatrixXd &mat_circle,VectorXd &mat_rxlevel,int bs_num,MatrixXd &mat_res,VectorXd &ms_pos)
 {
   int cal_cnt = 0; //
   MatrixXd mpoint = MatrixXd::Zero(2,2);
@@ -236,6 +266,10 @@ void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorX
   int    j     = 0;
   int    m,n,q;
   MatrixInt     matbs;
+  double ratio1,ratio2;
+  double square_val = 0;
+
+
   switch(bs_num)
   {
      case 1:
@@ -247,6 +281,33 @@ void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorX
       bs.row(0) = mat_circle.row(0);
       bs.row(1) = mat_circle.row(1);
       calc_circles_point(bs,mpoint);
+
+/*************ratio test************/
+/*      square_val = pow(bs(0,2),2) + pow(bs(1,2),2);
+      ratio1 = pow(bs(0,2),2)/square_val;
+      ratio2 = pow(bs(1,2),2)/square_val;
+
+
+      mid_point(0) = mpoint(1,0)*ratio2 + mpoint(0,0)*ratio1;
+      mid_point(1) = mpoint(1,1)*ratio2 + mpoint(0,1)*ratio1;
+      
+      sum_x += mid_point(0); 
+      sum_y += mid_point(1);
+ 
+      if(relation_arr[0][1])
+      {
+         sum_x += (mat_res(0,0)+mat_res(1,0));
+         sum_y += (mat_res(0,1)+mat_res(1,1));
+         ms_pos(0) = sum_x/3;
+         ms_pos(1) = sum_y/3;
+      }
+      else
+      { 
+         ms_pos(0) = sum_x;
+         ms_pos(1) = sum_y;
+      }
+*/
+/***************ratio end************/
       
       sum_x += (mpoint(0,0)+mpoint(1,0));
       sum_y += (mpoint(0,1)+mpoint(1,1));
@@ -300,7 +361,7 @@ void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorX
      if(inter_point_flag[m][n] == 0)
      {
       two_bs_dist = calc_2point_dist(mat_circle(m,0),mat_circle(m,1),mat_circle(n,0),mat_circle(n,1));
-      if(two_bs_dist >= mat_circle(m,2) + mat_circle(n,2) + 500)
+      if(two_bs_dist >= mat_circle(m,2) + mat_circle(n,2) + 450)
       {
           inter_point_flag[m][n] = ANCHOR_COUNT;
           continue;
@@ -308,6 +369,16 @@ void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorX
       bs.row(0) = mat_circle.row(m);
       bs.row(1) = mat_circle.row(n);
       calc_circles_point(bs,mpoint);
+/*
+      square_val = pow(bs(0,2),2) + pow(bs(1,2),2);
+      ratio1 = pow(bs(0,2),2)/square_val;
+      ratio2 = pow(bs(1,2),2)/square_val;
+
+      mid_point(0) = mpoint(1,0)*ratio2 + mpoint(0,0)*ratio1;
+      mid_point(1) = mpoint(1,1)*ratio2 + mpoint(0,1)*ratio1;
+      mid_res.row(i) = mid_point.row(0);
+*/
+
       mid_point(0) = (mpoint(0,0)+mpoint(1,0))/2;
       mid_point(1) = (mpoint(0,1)+mpoint(1,1))/2;
       mid_res.row(i) = mid_point.row(0);
@@ -380,7 +451,7 @@ void alg_converge_calc(MatrixXd &mat_circle,int bs_num,MatrixXd &mat_res,VectorX
    ms_pos(1) = sum_y/total_used_point;
 }      
 
-void  filed_calc_pos(MatrixXd &STATEA,int rows,double  aoa,double toa,VectorXd &ms_pos)
+void  filed_calc_pos(MatrixXd &STATEA,VectorXd &mat_rxlevel,int rows,double  aoa,double toa,VectorXd &ms_pos)
 {
      int i=0;
      int j=0;
@@ -427,7 +498,7 @@ void  filed_calc_pos(MatrixXd &STATEA,int rows,double  aoa,double toa,VectorXd &
 #elif ALG_MAINBS_CALC
      alg_mainbs_calc(mat_res,ms_pos);
 #else 
-     alg_converge_calc(STATEA,rows,mat_res,ms_pos);      
+     alg_converge_calc(STATEA,mat_rxlevel,rows,mat_res,ms_pos);      
  #endif  
 }
 
@@ -568,6 +639,7 @@ int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type)
 //   pos_convert_xy(pos_lb,pos_xy,bs_num+1);
    // end
 
+	VectorXd mat_rxlevel(bs_num);
    for(int i=0;i<bs_num ;i++)
    {
 //      bs(i,0) = pos_xy[i+1].x;  //xiaochunag
@@ -579,6 +651,7 @@ int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type)
       else
         bs(i,2) = cost_hata_simple(pbs[i].rxlevel,pbs[i].freq);
 */
+        mat_rxlevel(i) = pbs[i].rxlevel;
         if(pbs[i].freq < 1800)
              bs(i,2) = oku_hata_simple(pbs[i].rxlevel,pbs[i].freq);   
         else
@@ -591,7 +664,10 @@ int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type)
    VectorXd ms(2);
    ms<<0,0;
    memset(relation_arr,0,sizeof(relation_arr));
-   filed_calc_pos(bs,bs_num,ptr->aoa,ptr->toa,ms); //x,y ->xiaochuang
+   filed_calc_pos(bs,mat_rxlevel,bs_num,ptr->aoa,ptr->toa,ms); //x,y ->xiaochuang
+
+   calc_total_ratio(bs,bs_num,ms);
+
    ms_pos->pos_x = ms(0);
    ms_pos->pos_y = ms(1);
    cout << "##MS_POSITION:[ "<<ms_pos->pos_x<<","<<ms_pos->pos_y<<" ]"<<endl;   

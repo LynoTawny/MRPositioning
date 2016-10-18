@@ -13,7 +13,6 @@ INCLUDEPATH += D:\OneDrive\work\workspace\eigen-eigen-b9cd8366d4e8
 TARGET = MRPositioning
 TEMPLATE = app
 
-
 SOURCES += main.cpp\
         mainwindow.cpp \
     drivetestitem.cpp \
