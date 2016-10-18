@@ -32,9 +32,21 @@ MainWindow::MainWindow(QWidget *parent) :
 
     qDebug() << getNetIP();
 
-    QString dbPath("D:/MR Sample/DriveTest/base.db");
+    //QString dbPath("D:/MR Sample/DriveTest/base.db");
+    QString dbPath("./base.db");
     this->dbHandler = new BaseDBHandler(dbPath);
     this->dbHandler->openBaseDB();
+
+    ui->showBasePosBtn->hide();
+    ui->preprocessBtn->hide();
+    ui->queryBtn->hide();
+    ui->usrInfoEdit->hide();
+    ui->apiPosBtn->hide();
+    ui->apiVsTrueBtn->hide();
+    ui->baseVsTrueBtn->hide();
+    ui->textBrowser->hide();
+    ui->clearBtn->hide();
+    ui->truePosBtn->hide();
 }
 
 MainWindow::~MainWindow()
@@ -50,7 +62,8 @@ void MainWindow::on_clearBtn_clicked()
 
 void MainWindow::on_drTstRsltBtn_clicked()
 {
-    QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "D:/MR Sample/DriveTest");
+//    QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "D:/MR Sample/DriveTest");
+    QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "./DriveTest");
     qDebug() << drTstFilePath;
     QFile file(drTstFilePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -77,10 +90,14 @@ void MainWindow::on_drTstRsltBtn_clicked()
 
 //    QWebFrame * webFrame = ui->webView->page()->mainFrame();
 //    webFrame->evaluateJavaScript(QString("showTheLocaltion(\"114.426,34.527|117.554,36.446|119.852,30.554\",1);"));
+
+    on_showBasePosBtn_clicked();
 }
 
 void MainWindow::on_showBasePosBtn_clicked()
 {
+    on_clearBtn_clicked();
+
     QString points;
     foreach (DriveTestItem *item, itemList)
     {
@@ -109,6 +126,8 @@ void MainWindow::on_showBasePosBtn_clicked()
 
 void MainWindow::on_apiPosBtn_clicked()
 {
+    on_clearBtn_clicked();
+
     QString points;
     foreach (DriveTestItem *item, itemList)
     {
@@ -154,6 +173,8 @@ void MainWindow::on_apiPosBtn_clicked()
 
 void MainWindow::on_ourPosBtn_clicked()
 {
+    on_clearBtn_clicked();
+
     QString points;
 
     foreach (DriveTestItem *item, itemList)
@@ -192,10 +213,15 @@ void MainWindow::on_ourPosBtn_clicked()
     webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
 
     on_truePosBtn_clicked();
+
+    if(!ui->textBrowser->isHidden())
+        ui->textBrowser->hide();
 }
 
 void MainWindow::on_truePosBtn_clicked()
 {
+//    on_clearBtn_clicked();
+
     QString points;
     foreach (DriveTestItem *item, itemList)
     {
@@ -338,9 +364,11 @@ void MainWindow::convertXY2LonLat(double pos_x, double pos_y, double *lng, doubl
 
 void MainWindow::on_outVsTrueBtn_clicked()
 {
+    if(ui->textBrowser->isHidden())
+        ui->textBrowser->show();
+
     QString str;
-    ui->textBrowser->append("******************************************");
-    str.append("i|true lng,true lat|our lng,our lat|distance");
+    str.append("序号\t真实经度\t真实纬度\t定位经度\t定位纬度\t距离");
     ui->textBrowser->append(str);
 
     int i = 1;
@@ -355,22 +383,22 @@ void MainWindow::on_outVsTrueBtn_clicked()
         item->getOurPositioningResult(&our_lng, &our_lat, &our_x, &our_y);
         convertLonLat2XY(true_lng, true_lat, &true_x, &true_y);
 
-        str.append(QString("%1|").arg(i));
+        str.append(QString("%1\t").arg(i));
 
         str.append(QString::number(true_lng, 'g', 9));
-        str.append(",");
+        str.append("\t");
         str.append(QString::number(true_lat, 'g', 9));
-        str.append("|");
+        str.append("\t");
 
         str.append(QString::number(our_lng, 'g', 9));
-        str.append(",");
+        str.append("\t");
         str.append(QString::number(our_lat, 'g', 9));
-        str.append("|");
+        str.append("\t");
 
-        str.append(QString::number(our_x, 'g', 9));
-        str.append(",");
-        str.append(QString::number(our_y, 'g', 9));
-        str.append("|");
+//        str.append(QString::number(our_x, 'g', 9));
+//        str.append("\t");
+//        str.append(QString::number(our_y, 'g', 9));
+//        str.append("\t");
 
 //        double distance = GetDistance(true_lng, true_lat, our_lng, our_lat);
         double distance = GetDistanceByXY(our_x, our_y, true_x, true_y);
@@ -379,7 +407,7 @@ void MainWindow::on_outVsTrueBtn_clicked()
         ui->textBrowser->append(str);
         i++;
     }
-    ui->textBrowser->append("******************************************");
+    ui->textBrowser->append("**************************************************************************************");
 
 #if 0
     //打印基站xy
