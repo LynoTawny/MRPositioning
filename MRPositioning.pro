@@ -8,7 +8,7 @@ QT       += core gui webkitwidgets widgets sql network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-INCLUDEPATH += D:\OneDrive\work\workspace\eigen-eigen-b9cd8366d4e8
+INCLUDEPATH += ./eigen
 
 TARGET = MRPositioning
 TEMPLATE = app
