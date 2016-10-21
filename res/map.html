@@ -7,8 +7,6 @@
 	body, html,#allmap {width: 100%;height: 100%;overflow: hidden;margin:0;font-family:"微软雅黑";}
 	</style>
         <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=ojST3jwr9LGTWTIwxak4z6hkE11N6yMx"></script>
-        <script type="text/javascript" src="http://api.map.baidu.com/library/CurveLine/1.5/src/CurveLine.min.js"></script>
-        <script type="text/javascript" src="http://api.map.baidu.com/library/Polyline/1.5/src/Polyline.min.js"></script>
 	<title>地图展示</title>
 </head>
 <body>
@@ -17,13 +15,13 @@
 </html>
 <script type="text/javascript">
 	// 百度地图API功能
-      var mapShowLevel = 16;
+    var mapShowLevel = 16;
 	var map = new BMap.Map("allmap");    // 创建Map实例
 	map.centerAndZoom(new BMap.Point(114.435035,30.463954), 16);  // 初始化地图,设置中心点坐标和地图级别
 	map.addControl(new BMap.MapTypeControl());   //添加地图类型控件
      
-     var top_left_control = new BMap.ScaleControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});
-      map.addControl(top_left_control);
+    var top_left_control = new BMap.ScaleControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});
+    map.addControl(top_left_control);
       
 	map.enableScrollWheelZoom(true);     //开启鼠标滚轮缩放
 
@@ -51,15 +49,15 @@ function showTheLocaltion(allpointinfo,type)
             marker1.setIcon(myIcon);
          }
            
-         map.addOverlay(marker1);              // 将标注添加到地图中
-         var label = new BMap.Label(i+1,{offset:new BMap.Size(20,-10)});
-	   marker1.setLabel(label);
-         marker1.setTitle(pointvalue[0] + "," +pointvalue[1]);
-         if(i == 0)
-         {
+        map.addOverlay(marker1);              // 将标注添加到地图中
+        var label = new BMap.Label(i+1,{offset:new BMap.Size(20,-10)});
+        marker1.setLabel(label);
+        marker1.setTitle(pointvalue[0] + "," +pointvalue[1]);
+        if(i == 0)
+        {
               map.centerAndZoom(new BMap.Point(pointvalue[0],pointvalue[1]), mapShowLevel );  
-         }
-     }
+        }
+    }
     
     if(type == 1)
     {
@@ -111,9 +109,8 @@ function drawWalkArea(allpointinfo, type)
         color = "red";
     }
     var polyline = new BMap.Polyline(points , {strokeColor:color, strokeWeight:3, strokeOpacity:0.5}); 
-	//var curve = new BMapLib.Polyline(points, {strokeColor:"blue", //strokeWeight:3, strokeOpacity:0.5}); //创建弧线对象
 
-	map.addOverlay(polyline ); //添加到地图中
+    map.addOverlay(polyline ); //添加到地图中
 	
 }
 
@@ -165,7 +162,28 @@ function toFixPoint(pointSet , type)
     }
     return resultstr;
 }
-    
+
+var tileLayer = new BMap.TileLayer({isTransparentPng: true});
+
+tileLayer.getTilesUrl = function(tileCoord, zoom) {
+    var x = tileCoord.x;
+    var y = tileCoord.y;
+    if(zoom == 18)
+        return "http://developer.baidu.com/map/jsdemo/img/border.png";
+    else
+        return "";
+}
+
+function add_grid(){
+    map.addTileLayer(tileLayer);
+}
+
+function delete_grid(){
+    map.removeTileLayer(tileLayer);
+}
+
+add_grid();
+
 //showTheLocaltion(116.404,39.915);
 //showTheLocaltion(114.435035,30.463954);
 //var arrpoints = [];
