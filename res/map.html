@@ -168,10 +168,7 @@ var tileLayer = new BMap.TileLayer({isTransparentPng: true});
 tileLayer.getTilesUrl = function(tileCoord, zoom) {
     var x = tileCoord.x;
     var y = tileCoord.y;
-    if(zoom == 18)
-        return "http://developer.baidu.com/map/jsdemo/img/border.png";
-    else
-        return "";
+    return "http://developer.baidu.com/map/jsdemo/img/border.png";
 }
 
 function add_grid(){
@@ -181,6 +178,26 @@ function add_grid(){
 function delete_grid(){
     map.removeTileLayer(tileLayer);
 }
+
+function addBaseLocation(pointArray, labelStr)
+{
+    pointvalue = pointArray.split(',');
+    if(pointvalue.length != 2)
+    {
+         //格式出错
+         return 1;
+    }
+     var p = new BMap.Point(pointvalue[0],pointvalue[1]); //点位置
+     var marker1 = new BMap.Marker(p);  // 创建标注
+       
+    map.addOverlay(marker1);              // 将标注添加到地图中
+    
+    var label = new BMap.Label(labelStr,{offset:new BMap.Size(20,-10)});
+    marker1.setLabel(label);
+    marker1.setTitle(pointvalue[0] + "," +pointvalue[1]);
+    map.centerAndZoom(new BMap.Point(pointvalue[0],pointvalue[1]), mapShowLevel );        
+}
+
 
 add_grid();
 

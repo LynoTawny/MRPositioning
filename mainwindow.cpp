@@ -38,11 +38,11 @@ MainWindow::MainWindow(QWidget *parent) :
     this->dbHandler->openBaseDB();
 
     ui->showBasePosBtn->hide();
-    ui->preprocessBtn->hide();
+//    ui->preprocessBtn->hide();
     ui->queryBtn->hide();
     ui->usrInfoEdit->hide();
-    ui->apiPosBtn->hide();
-    ui->apiVsTrueBtn->hide();
+//    ui->apiPosBtn->hide();
+//    ui->apiVsTrueBtn->hide();
     ui->baseVsTrueBtn->hide();
     ui->textBrowser->hide();
     ui->clearBtn->hide();
@@ -62,8 +62,8 @@ void MainWindow::on_clearBtn_clicked()
 
 void MainWindow::on_drTstRsltBtn_clicked()
 {
-//    QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "D:/MR Sample/DriveTest");
-    QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "./DriveTest");
+    QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "D:/MR Sample/DriveTest");
+    //QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "./DriveTest");
     qDebug() << drTstFilePath;
     QFile file(drTstFilePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -77,13 +77,25 @@ void MainWindow::on_drTstRsltBtn_clicked()
     int n = 1;
     while(!line.isEmpty())
     {
+        qDebug() << "LINE:" << __LINE__ << "num" << n;
         DriveTestItem *item = new DriveTestItem(n, line);
         item->setBaseDBHandler(this->dbHandler);
         itemList.append(item);
         line = in.readLine();
         n++;
 
-//        break;
+//        QList<base_meas_t> &results = item->getResults();
+//        foreach (base_meas_t meas, results)
+//        {
+//            qDebug() << "LINE:" << __LINE__ << "|"
+//                     << meas.base_meas_rslt.lac << ","
+//                     << meas.base_meas_rslt.ci << ","
+//                     << meas.base_meas_rslt.arfcn << ","
+//                     << meas.base_meas_rslt.bsic << ","
+//                     << meas.base_meas_rslt.rxlev;
+//        }
+//        if(n > 50)
+//            break;
     }
 
     qDebug() << "LINE:" << __LINE__ << "; read drive test file done.";
@@ -98,6 +110,7 @@ void MainWindow::on_showBasePosBtn_clicked()
 {
     on_clearBtn_clicked();
 
+#if 0
     QString points;
     foreach (DriveTestItem *item, itemList)
     {
@@ -107,6 +120,7 @@ void MainWindow::on_showBasePosBtn_clicked()
         }
 
         QList<base_info_t> & base_infos = item->getBaseInfos();
+        qDebug() << "FILE:" << __FILE__ << "LINE:" << __LINE__ << "query base information done.";
 
         //画基站位置
         foreach (base_info_t base, base_infos)
@@ -117,11 +131,48 @@ void MainWindow::on_showBasePosBtn_clicked()
             points.append("|");
         }
     }
-
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
     webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
+#else
+    QMap<QString, base_info_t> bases;
 
-    //qDebug() << QString("showTheLocaltion(\"%1\",0)").arg(points);
+    foreach (DriveTestItem *item, itemList) {
+
+        if(!item->isBaseInfoReady())
+        {
+            item->queryBaseInformation();
+        }
+
+        QList<base_info_t> & base_infos = item->getBaseInfos();
+        QList<base_meas_t> & results = item->getResults();
+
+        int count = results.count();
+        for(int i = 0; i < count; i++)
+        {
+            QString key;
+            key.append(QString::number(results.at(i).base_meas_rslt.lac));
+            key.append(",");
+            key.append(QString::number(results.at(i).base_meas_rslt.ci));
+
+            if(!bases.contains(key))
+            {
+                bases.insert(key, base_infos.at(i));
+            }
+        }
+    }
+#endif
+    QWebFrame * webFrame = ui->webView->page()->mainFrame();
+    for(QMap<QString, base_info_t>::iterator it = bases.begin(); it != bases.end(); it++)
+    {
+        QString point;
+        point.append(QString::number(it.value().lng, 'g', 9));
+        point.append(",");
+        point.append(QString::number(it.value().lat, 'g', 9));
+
+        QString str = QString("addBaseLocation(\"%1\", \"%2\")").arg(point).arg(it.key());
+        webFrame->evaluateJavaScript(str);
+        //qDebug() << str;
+    }
 }
 
 void MainWindow::on_apiPosBtn_clicked()
@@ -209,6 +260,7 @@ void MainWindow::on_ourPosBtn_clicked()
     }
     points.chop(1);
 
+//    qDebug() << "FILE:" << __FILE__ << "LINE:" << __LINE__ << ":" << points;
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
     webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
 
@@ -263,45 +315,53 @@ double MainWindow::GetDistanceByXY(double x1, double y1, double x2, double y2)
 
 void MainWindow::on_apiVsTrueBtn_clicked()
 {
-    //    double tst = GetDistance(114.430557,30.461733,114.430557,30.461241);
-    //    qDebug("114.430557,30.461733|114.430557,30.461241 distance: %.9g", tst);
+    if(ui->textBrowser->isHidden())
+        ui->textBrowser->show();
 
     QString str;
-    ui->textBrowser->append("******************************************");
-    str.append("i|true lng,true lat|api lng,api lat,api rad|distance");
+    str.append("序号\t真实经度\t真实纬度\t定位经度\t定位纬度\t距离");
     ui->textBrowser->append(str);
 
     int i = 1;
+    double sum = 0;
     foreach (DriveTestItem *item, itemList  )
     {
         str.clear();
 
         double true_lat, true_lng;
+        double true_x, true_y;
         double api_lat, api_lng, api_rad;
         item->getTrueBD09Coord(&true_lng, &true_lat);
         item->getApiPositioningResult(&api_lng, &api_lat, &api_rad);
+        convertLonLat2XY(true_lng, true_lat, &true_x, &true_y);
 
-        str.append(QString("%1|").arg(i));
+        str.append(QString("%1\t").arg(i));
 
         str.append(QString::number(true_lng, 'g', 9));
-        str.append(",");
+        str.append("\t");
         str.append(QString::number(true_lat, 'g', 9));
-        str.append("|");
+        str.append("\t");
 
         str.append(QString::number(api_lng, 'g', 9));
-        str.append(",");
+        str.append("\t");
         str.append(QString::number(api_lat, 'g', 9));
-        str.append(",");
-        str.append(QString::number(api_rad, 'g', 9));
-        str.append("|");
+        str.append("\t");
 
+//        str.append(QString::number(our_x, 'g', 9));
+//        str.append("\t");
+//        str.append(QString::number(our_y, 'g', 9));
+//        str.append("\t");
+
+//        double distance = GetDistance(true_lng, true_lat, our_lng, our_lat);
         double distance = GetDistance(true_lng, true_lat, api_lng, api_lat);
         str.append(QString::number(distance, 'g', 9));
+        sum += distance;
 
         ui->textBrowser->append(str);
         i++;
     }
-    ui->textBrowser->append("******************************************");
+    ui->textBrowser->append("平均精度：" + QString::number(sum / (i - 1), 'g', 9));
+    ui->textBrowser->append("**************************************************************************************");
 }
 
 QString MainWindow::getNetIP(void)
@@ -372,6 +432,7 @@ void MainWindow::on_outVsTrueBtn_clicked()
     ui->textBrowser->append(str);
 
     int i = 1;
+    double sum = 0;
     foreach (DriveTestItem *item, itemList  )
     {
         str.clear();
@@ -403,10 +464,12 @@ void MainWindow::on_outVsTrueBtn_clicked()
 //        double distance = GetDistance(true_lng, true_lat, our_lng, our_lat);
         double distance = GetDistanceByXY(our_x, our_y, true_x, true_y);
         str.append(QString::number(distance, 'g', 9));
+        sum += distance;
 
         ui->textBrowser->append(str);
         i++;
     }
+    ui->textBrowser->append("平均精度：" + QString::number(sum / (i - 1), 'g', 9));
     ui->textBrowser->append("**************************************************************************************");
 
 #if 0
@@ -441,16 +504,27 @@ void MainWindow::on_outVsTrueBtn_clicked()
 
 void MainWindow::on_preprocessBtn_clicked()
 {
+    int oldCnt = 0;
     rawDataRead();
-    rawDataFiltrate();
+    qDebug() << "LINE:" << __LINE__ << ";" << measPointList.count();
+    while(1)
+    {
+        rawDataFiltrate();
+        qDebug() << "LINE:" << __LINE__ << ";" << measPointList.count();
+        if(oldCnt == measPointList.count())
+        {
+            break;
+        }
+        else
+        {
+            oldCnt = measPointList.count();
+        }
+    }
     rawDataFill();
+    qDebug() << "LINE:" << __LINE__ << ";" << measPointList.count();
     rawDataOutputNewFile();
 }
 
-void MainWindow::rawDataFill(void)
-{
-
-}
 
 void MainWindow::rawDataRead(void)
 {
@@ -549,6 +623,8 @@ bool isCellRawDataCorrect(cell_raw_data_t *p)
 
 void MainWindow::rawDataFiltrate(void)
 {
+//    bool isPointValid = true;
+
     for(QList<meas_point_raw_data_t *>::iterator it = measPointList.begin();
         it != measPointList.end(); it++)
     {
@@ -562,6 +638,22 @@ void MainWindow::rawDataFiltrate(void)
             measPointList.erase(it);
             continue;
         }
+
+//        for(int i = 0; i < p->cell_count; i++)
+//        {
+//            if(!isCellRawDataCorrect(&p->cell_list[i]))
+//            {
+//                isPointValid = false;
+//                break;
+//            }
+//        }
+//        if(!isPointValid)
+//        {
+//            free(p);
+//            measPointList.erase(it);
+//            continue;
+//        }
+
 
         //先保存测量点中有效的基站测量结果到vector
         QVector<cell_raw_data_t> vector;
@@ -600,6 +692,68 @@ void MainWindow::rawDataFiltrate(void)
     }
 }
 
+void MainWindow::rawDataFill(void)
+{
+    for(QList<meas_point_raw_data_t *>::iterator it = measPointList.begin();
+        it != measPointList.end(); it++)
+    {
+        meas_point_raw_data_t *p = *it;
+        bool isPointValid = true;
+        //删掉数据残缺的测量点
+        for(int i = 0; i < p->cell_count; i++)
+        {
+            if(!isCellRawDataCorrect(&p->cell_list[i]))
+            {
+                isPointValid = false;
+                break;
+            }
+        }
+        if(!isPointValid)
+        {
+            free(p);
+            measPointList.erase(it);
+            continue;
+        }
+
+
+        //先保存测量点中有效的基站测量结果到vector
+//        QVector<cell_raw_data_t> vector;
+//        vector.append(p->cell_list[0]);
+//        for(int i = 1; i < p->cell_count; i++)
+//        {
+////            if(isCellRawDataValid(&p->cell_list[i]))
+//            if(isCellRawDataCorrect(&p->cell_list[i]))
+//            {
+//                vector.append(p->cell_list[i]);
+//            }
+//        }
+
+//        //测量点中基站数目不够，删掉测量点
+//        if(vector.count() < 3)
+//        {
+//            free(p);
+//            measPointList.erase(it);
+//            continue;
+//        }
+
+//        //分配空间保存有效的基站测量结果
+//        meas_point_raw_data_t * p_data = (meas_point_raw_data_t *)malloc(sizeof(meas_point_raw_data_t) +
+//                                                                     vector.count() * sizeof(cell_raw_data_t));
+//        p_data->no = p->no;
+//        strncpy(p_data->time, p->time, TIME_BUF_LEN - 1);
+//        p_data->cell_count = vector.count();
+//        for(int i = 0; i < vector.count(); i++)
+//        {
+//            p_data->cell_list[i] = vector.at(i);
+//        }
+
+//        //替换链表中的元素
+//        *it = p_data;
+//        free(p);
+    }
+
+}
+
 void MainWindow::rawDataOutputNewFile(void)
 {
     QFile file(QString("D:/MR Sample/DriveTest/PreprocessOK.txt"));
@@ -610,7 +764,7 @@ void MainWindow::rawDataOutputNewFile(void)
     }
 
     QTextStream out(&file);
-    out << "preprocess complete\n";
+//    out << "preprocess complete\n";
     for(QList<meas_point_raw_data_t *>::iterator it = measPointList.begin();
         it != measPointList.end(); it ++)
     {
@@ -620,6 +774,7 @@ void MainWindow::rawDataOutputNewFile(void)
         //str.append(QString("%1|").arg(p->no));
         str.append(QString(p->time));
         str.append("|");
+        str.append("114.430693,30.46479|");
         for(int i = 0; i < p->cell_count; i++)
         {
             str.append(QString("%1,").arg(p->cell_list[i].lac));

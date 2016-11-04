@@ -14,16 +14,17 @@
 
 struct _base_meas
 {
-    int arfcn;
     int lac;
     int ci;
+    int arfcn;
+    int bsic;
     int rxlev;
 };
 
 typedef union
 {
     struct _base_meas base_meas_rslt;
-    int buf[4];
+    int buf[5];
 }base_meas_t;
 
 typedef struct
@@ -112,6 +113,7 @@ private:
     bool baseInfoReadyFlag;
     bool apiPosReadyFlag;
     bool ourPosReadyFlag;
+    bool isTruePosValid;
     //bool truePosReadFlag;
 };
 

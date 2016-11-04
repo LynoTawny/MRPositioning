@@ -627,7 +627,7 @@ int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type)
    // start 坐标转换
 //   memset(pos_lb,0,sizeof(pos_lb));
 //   memset(pos_xy,0,sizeof(pos_xy));
-//   bs_num = bs_num > MAX_BS_RECORD ? MAX_BS_RECORD : bs_num;
+    bs_num = bs_num > MAX_BS_RECORD ? MAX_BS_RECORD : bs_num;
 
 //   pos_lb[0].longti = ptr->true_lng;
 //   pos_lb[0].lati   = ptr->true_lat;

@@ -28,25 +28,33 @@ DriveTestItem::DriveTestItem(int line, QString &lineStr)
 {
     this->p_xml_data = NULL;
 
-    QStringList strList = lineStr.split(' ', QString::SkipEmptyParts);
+    QStringList strList = lineStr.split('|', QString::SkipEmptyParts);
     this->time = strList.at(0);
-    this->true_wgs84_lat_str = strList.at(1);
-    this->true_wgs84_lat = this->true_wgs84_lat_str.toDouble();
-    this->true_wgs84_lng_str = strList.at(2);
-    this->true_wgs84_lng = this->true_wgs84_lng_str.toDouble();
-    this->line = line;
-    this->result_cnt = strList.count() - 3;
 
-    //qDebug("%.15lg,%.15lg", this->true_wgs84_lat, this->true_wgs84_lng);
+    QString truePosStr = strList.at(1);
+    QStringList truePosList = truePosStr.split(',', QString::SkipEmptyParts);
+    this->true_wgs84_lat_str = truePosList.at(1);
+    this->true_wgs84_lat = this->true_wgs84_lat_str.toDouble();
+    this->true_wgs84_lng_str = truePosList.at(0);
+    this->true_wgs84_lng = this->true_wgs84_lng_str.toDouble();
+//    this->true_bd09_lat = this->true_wgs84_lat;
+//    this->true_bd09_lng = this->true_wgs84_lng;
+
+    this->line = line;
+    this->result_cnt = strList.count() - 2;
+
+    qDebug("%.15lg,%.15lg", this->true_wgs84_lat, this->true_wgs84_lng);
     for(int i = 0; i < this->result_cnt; i++)
     {
-        QString str = strList.at(i + 3);
+        QString str = strList.at(i + 2);
         base_meas_t result;
         for(int j = 0; j < 4; j++)
         {
             result.buf[j] = str.section(',', j, j).toInt();
         }
+        result.buf[4] = str.section(',', 4, 4).toFloat();
         results.append(result);
+        //qDebug() << str.section(',', 4, 4) << "|" << result.buf[4] << result.base_meas_rslt.rxlev;
     }
 
     // start post方式调用百度api，异步，wgs84坐标转换为bd09坐标
@@ -77,6 +85,7 @@ DriveTestItem::DriveTestItem(int line, QString &lineStr)
     baseInfoReadyFlag = false;
     apiPosReadyFlag = false;
     ourPosReadyFlag = false;
+    isTruePosValid = false;
 }
 
 DriveTestItem::~DriveTestItem()
@@ -134,6 +143,7 @@ void DriveTestItem::coordTransformFinishedSlot(QNetworkReply *reply)
                         QJsonValue y_value = result_obj.take("y");
                         this->true_bd09_lng = x_value.toVariant().toDouble();
                         this->true_bd09_lat = y_value.toVariant().toDouble();
+                        this->isTruePosValid = true;
                         //qDebug("LINE:%d %.15lg,%.15lg",__LINE__, this->true_bd09_lat, this->true_bd09_lng);
                     }
                 }
