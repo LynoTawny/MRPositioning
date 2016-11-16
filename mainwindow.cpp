@@ -21,6 +21,7 @@ extern double prev_y;
 
 void initPositionCal(void)
 {
+    curItem = NULL;
     pos_val = 0;
     prev_x = 0;
     prev_y = 0;
@@ -50,18 +51,11 @@ MainWindow::MainWindow(QWidget *parent) :
     this->dbHandler = new BaseDBHandler(dbPath);
     this->dbHandler->openBaseDB();
 
-    ui->showBasePosBtn->hide();
     ui->ourPosBtn->setEnabled(false);
     ui->outVsTrueBtn->setEnabled(false);
 
 //    ui->preprocessBtn->hide();
-    ui->queryBtn->hide();
-    ui->usrInfoEdit->hide();
-//    ui->apiPosBtn->hide();
-//    ui->apiVsTrueBtn->hide();
-    ui->baseVsTrueBtn->hide();
-    ui->clearBtn->hide();
-    ui->truePosBtn->hide();
+//    ui->clearBtn->hide();
 
     this->statusLabel = new QLabel;
     this->statusLabel->setMinimumSize(this->statusLabel->sizeHint());
@@ -78,13 +72,14 @@ MainWindow::~MainWindow()
 void MainWindow::on_clearBtn_clicked()
 {
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
-    webFrame->evaluateJavaScript(QString("clear()"));
+    webFrame->evaluateJavaScript(QString("clearChoosedBases()"));
 }
 
 void MainWindow::on_drTstRsltBtn_clicked()
 {
     initPositionCal();
-    on_clearBtn_clicked();
+    QWebFrame * webFrame = ui->webView->page()->mainFrame();
+    webFrame->evaluateJavaScript(QString("clear()"));
     itemList.clear();
 
     QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "D:/MR Sample/DriveTest");
@@ -137,16 +132,17 @@ void MainWindow::on_drTstRsltBtn_clicked()
 typedef struct
 {
     base_info_t base_info;//基站信息
+    int lac;
+    int ci;
     QVector<int> meas_point_set;//保存接收到该基站的测量点序号
 }super_base_info_t;
 
 void MainWindow::on_showBasePosBtn_clicked()
 {
-    on_clearBtn_clicked();
-
-    QMap<QString, base_info_t> bases;
+    QMap<QString, super_base_info_t> bases;
     this->statusLabel->setText(tr("正在查询基站经纬度，稍后。。。"));
 
+    int meas_point_index = 1;
     foreach (DriveTestItem *item, itemList) {
 
         if(!item->isBaseInfoReady())
@@ -167,32 +163,58 @@ void MainWindow::on_showBasePosBtn_clicked()
 
             if(!bases.contains(key))
             {
-                bases.insert(key, base_infos.at(i));
+                //如果Map中没有该基站
+                super_base_info_t su_base_info;
+                su_base_info.base_info = base_infos.at(i);
+                su_base_info.meas_point_set.append(meas_point_index);
+
+                base_meas_t result = results.at(i);
+                su_base_info.ci = result.base_meas_rslt.ci;
+                su_base_info.lac = result.base_meas_rslt.lac;
+                bases.insert(key, su_base_info);
+            }
+            else
+            {
+                //如果Map中有该基站
+                super_base_info_t su_base_info = bases[key];
+                su_base_info.meas_point_set.append(meas_point_index);
+                bases[key] = su_base_info;
             }
         }
+
+        meas_point_index ++;
     }
     this->statusLabel->setText(tr("查询基站位置完成！点击\"定位位置\"。"));
 
     //显示所有基站位置
     QString points;
-    for(QMap<QString, base_info_t>::iterator it = bases.begin(); it != bases.end(); it++)
+    for(QMap<QString, super_base_info_t>::iterator it = bases.begin(); it != bases.end(); it++)
     {
-        points.append(QString::number(it.value().lng, 'g', 9));
+        points.append(QString::number(it.value().base_info.lng, 'g', 9));
         points.append(",");
-        points.append(QString::number(it.value().lat, 'g', 9));
+        points.append(QString::number(it.value().base_info.lat, 'g', 9));
+        points.append(",");
+        points.append(QString::number(it.value().lac));
+        points.append(",");
+        points.append(QString::number(it.value().ci));
+        points.append(",");
+        foreach (int index, it.value().meas_point_set) {
+            points.append(QString::number(index));
+            points.append("/");
+        }
+        points.chop(1);
         points.append("|");
     }
     points.chop(1);
 
-    QWebFrame * webFrame = ui->webView->page()->mainFrame();
+    qDebug() << __FILE__ << __LINE__ << points;
     QString str = QString("showAllBaseLocation(\"%1\")").arg(points);
+    QWebFrame * webFrame = ui->webView->page()->mainFrame();
     webFrame->evaluateJavaScript(str);
 }
 
 void MainWindow::on_apiPosBtn_clicked()
 {
-    on_clearBtn_clicked();
-
     QString points;
     foreach (DriveTestItem *item, itemList)
     {
@@ -510,13 +532,19 @@ void MainWindow::on_outVsTrueBtn_clicked()
 
 void MainWindow::on_preprocessBtn_clicked()
 {
+    QString rawDataFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "D:/MR Sample/DriveTest");
+    if(rawDataFilePath.isEmpty())
+    {
+        qDebug() << __FILE__ << "LINE:" << __LINE__ << "no file selected.";
+        return;
+    }
+
+    rawDataRead(rawDataFilePath);
+
     int oldCnt = 0;
-    rawDataRead();
-    qDebug() << "LINE:" << __LINE__ << ";" << measPointList.count();
     while(1)
     {
         rawDataFiltrate();
-        qDebug() << "LINE:" << __LINE__ << ";" << measPointList.count();
         if(oldCnt == measPointList.count())
         {
             break;
@@ -527,15 +555,12 @@ void MainWindow::on_preprocessBtn_clicked()
         }
     }
     rawDataFill();
-    qDebug() << "LINE:" << __LINE__ << ";" << measPointList.count();
-    rawDataOutputNewFile();
+    rawDataOutputNewFile(rawDataFilePath);
 }
 
 
-void MainWindow::rawDataRead(void)
+void MainWindow::rawDataRead(QString rawDataFilePath)
 {
-    QString rawDataFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "D:/MR Sample/DriveTest");
-
     QFile file(rawDataFilePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -760,9 +785,9 @@ void MainWindow::rawDataFill(void)
 
 }
 
-void MainWindow::rawDataOutputNewFile(void)
+void MainWindow::rawDataOutputNewFile(QString rawDataFilePath)
 {
-    QString fileName = "D:/MR Sample/DriveTest/PreprocessOK_" + QDate::currentDate().toString("yyyy-MM-dd") + ".txt";
+    QString fileName = rawDataFilePath.split(".").at(0) + "_PreprcsOK_" + QDate::currentDate().toString("yyyy-MM-dd") + ".txt";
     QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
     {

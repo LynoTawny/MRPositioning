@@ -50,11 +50,11 @@ private:
     double GetDistanceByXY(double x1, double y1, double x2, double y2);
     void convertLonLat2XY(double lng, double lat, double *pos_x, double *pox_y);
     void convertXY2LonLat(double pos_x, double pos_y, double *lng, double *lat);
-    void rawDataRead(void);
+    void rawDataRead(QString rawDataFilePath);
     void rawDataFiltrate(void);
     void rawDataFill(void);
     void rawDataFinalyCheck(void);
-    void rawDataOutputNewFile(void);
+    void rawDataOutputNewFile(QString rawDataFilePath);
     QString getNetIP(void);
     BaseDBHandler * dbHandler;
     QList<meas_point_raw_data_t *> measPointList;

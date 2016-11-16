@@ -23,11 +23,32 @@
     var top_left_control = new BMap.ScaleControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});
     map.addControl(top_left_control);
       
-	map.enableScrollWheelZoom(true);     //开启鼠标滚轮缩放    
+	map.enableScrollWheelZoom(true);     //开启鼠标滚轮缩放 
 
+    var truePosIcon = new BMap.Icon("http://api.map.baidu.com/img/markers.png", new BMap.Size(23, 25), {
+                         offset: new BMap.Size(10, 25), // 指定定位位置
+                         imageOffset: new BMap.Size(0, 0 - 10 * 25) // 设置图片偏移
+                     });    
+
+    var myIcon = new BMap.Icon("http://api.map.baidu.com/img/markers.png", new BMap.Size(23, 25), {
+                         offset: new BMap.Size(10, 25), // 指定定位位置
+                         imageOffset: new BMap.Size(0, 0 - 11 * 25) // 设置图片偏移
+                     });
+    var myIconChoosed = new BMap.Icon("http://api.map.baidu.com/img/markers.png", new BMap.Size(23, 25), {
+                         offset: new BMap.Size(10, 25), // 指定定位位置
+                         imageOffset: new BMap.Size(0, 0 - 12 * 25) // 设置图片偏移
+                     });
 // 经纬度接口
+var markers = [];
+var choosedMarkers = [];
 function showTheLocaltion(allpointinfo,type)
 {
+    if(type === 0) {
+        while(markers.length !== 0) {
+            map.removeOverlay(markers.pop());
+        }
+    }
+    
     //alert(allpointinfo);
     var pointArray = allpointinfo.split('|');
     for(var i=0;i<pointArray.length;i++)
@@ -40,17 +61,16 @@ function showTheLocaltion(allpointinfo,type)
         }
          var p = new BMap.Point(pointvalue[0],pointvalue[1]); //点位置
          var marker1 = new BMap.Marker(p);  // 创建标注
-         if(type == 1)
+         if(type === 1)
          {
-            var myIcon = new BMap.Icon("http://api.map.baidu.com/img/markers.png", new BMap.Size(23, 25), {
-                                 offset: new BMap.Size(10, 25), // 指定定位位置
-                                 imageOffset: new BMap.Size(0, 0 - 10 * 25) // 设置图片偏移
-                             });
-            marker1.setIcon(myIcon);
+            marker1.setIcon(truePosIcon);
          }
          else
          {
+            marker1.setIcon(myIcon);
             marker1.addEventListener("click", doClickMarker);
+            marker1.index = i;
+            markers.push(marker1);
          }    
            
         map.addOverlay(marker1);              // 将标注添加到地图中
@@ -192,12 +212,16 @@ function showAllBaseLocation(allpointinfo)
     for(var i = 0; i < pointArray.length; i++)
     {
         pointvalue = pointArray[i].split(',');
-        if(pointvalue.length != 2)
+        if(pointvalue.length != 5)
         {
              //格式出错
              return 1;
         }
-        points.push(new BMap.Point(pointvalue[0],pointvalue[1]));
+        var p = new BMap.Point(pointvalue[0],pointvalue[1]);
+        p.lac = pointvalue[2];
+        p.ci = pointvalue[3];
+        p.sets = pointvalue[4];//这里保存能接收到该基站信号的测量点序号
+        points.push(p);
     }
     
     var options = {
@@ -207,6 +231,7 @@ function showAllBaseLocation(allpointinfo)
     };
     
     var pointCollection = new BMap.PointCollection(points, options);  // 初始化PointCollection
+    pointCollection.addEventListener('click', doClickBase);
     map.addOverlay(pointCollection);  // 添加Overlay
 }
 
@@ -214,9 +239,6 @@ var overlays = [];
 // 在地图上显示参与计算的基站位置,格式：lng,lat,radius,lac,ci,rxlev|...
 function addBaseLocation(allpointinfo)
 {
-    while(overlays.length !== 0) {
-        map.removeOverlay(overlays.pop());
-    }
     
     var tmpArray = allpointinfo.split('|');
     var usedPoints = [];
@@ -263,27 +285,40 @@ function addBaseLocation(allpointinfo)
 
     
     var usedPointCollection = new BMap.PointCollection(usedPoints, usedPointOptions);  // 初始化PointCollection
-    usedPointCollection.addEventListener('click', doClickBase);
+    usedPointCollection.addEventListener('click', doClickBaseChoosed);
     var unusedPointCollection = new BMap.PointCollection(unusedPoints, unusedPointOptions);  // 初始化PointCollection
-    unusedPointCollection.addEventListener('click', doClickBase);
+    unusedPointCollection.addEventListener('click', doClickBaseChoosed);
     overlays.push(usedPointCollection);
     overlays.push(unusedPointCollection);
     map.addOverlay(usedPointCollection);  // 添加Overlay
     map.addOverlay(unusedPointCollection);
 }
 
+function clearChoosedBases() {
+    while(overlays.length !== 0) {
+        map.removeOverlay(overlays.pop());
+    }
+}
+
 // 处理marker的单击事件
 function doClickMarker(click) {
     //console.info(click.point); //获得被点击位置的经纬度
     //console.info(click.target.getLabel().content); //获得被点击的marker的label的内容
+    while(overlays.length !== 0) {
+        map.removeOverlay(overlays.pop());
+    }
+    while(choosedMarkers.length !== 0) {
+        choosedMarkers.pop().setIcon(myIcon);
+    }
     
     var content = click.target.getLabel().content.toString(); //content保存了测量点序号
     location.href = content; //将content通过一个url发送给Qt
-    
-    //addBaseLocation("114.434859,30.4641974,200|114.434868,30.4650268,200|114.430991,30.4644528,200|114.430988,30.4639009,200|");
+    click.target.setIcon(myIconChoosed);
+    choosedMarkers.push(click.target);
 }
 
-function doClickBase(click) {
+//处理参与运算的基站被点击
+function doClickBaseChoosed(click) {
     //console.info(click.point.index); //测试给Point对象加的index
     
     //格式：lng,lat,radius,lac,ci,rxlev
@@ -298,7 +333,48 @@ function doClickBase(click) {
     map.openInfoWindow(infoWindow, click.point); //开启信息窗口
 }
 
-add_grid();
+//处理基站被点击
+function doClickBase(click) {
+    var p = click.point;
+    
+    var array = p.sets.split("/");
+    
+    while(choosedMarkers.length !== 0) {
+        choosedMarkers.pop().setIcon(myIcon);
+    }
+    
+    for(var i = 0; i < array.length; i++) {
+        if(markers.length <= array[i] - 1)
+            continue;
+        markers[array[i] - 1].setIcon(myIconChoosed);
+        choosedMarkers.push(markers[array[i] - 1]);
+    }
+
+    var opts = {
+        width : 200,     // 信息窗口宽度
+        height: 200,     // 信息窗口高度
+        title : "LAC: " + p.lac + "; CI: " + p.ci, // 信息窗口标题
+    }
+    var str = "相关测量点序号：" + "<br>";
+    //str += "<table border=\"1\">";
+    str += "<table>";
+    
+    for(var i = 0; i < array.length / 8 + 1; i++) {
+        str += "<tr>";
+        for(var j = 0; j < 8 && (8 * i + j < array.length); j ++) {
+            str += "<td>";
+            str += array[8 * i + j];
+            str += ","
+            str += "</td>";
+        }
+        str += "</tr>";
+    }
+    str += "</table>"
+	var infoWindow = new BMap.InfoWindow(str, opts);  // 创建信息窗口对象
+    map.openInfoWindow(infoWindow, click.point); //开启信息窗口
+}
+
+//add_grid();
 
 //showTheLocaltion(116.404,39.915);
 //showTheLocaltion(114.435035,30.463954);

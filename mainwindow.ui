@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,1,0,0,0">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,1,0,0">
       <item>
        <widget class="QPushButton" name="drTstRsltBtn">
         <property name="text">
@@ -46,31 +46,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="clearBtn">
-        <property name="text">
-         <string>清地图</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="truePosBtn">
-        <property name="text">
-         <string>真实位置</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="showBasePosBtn">
-        <property name="text">
-         <string>查询基站</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
-      <item>
        <widget class="QPushButton" name="preprocessBtn">
         <property name="text">
          <string>Preprocess</string>
@@ -78,48 +53,11 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="queryBtn">
+       <widget class="QPushButton" name="clearBtn">
         <property name="text">
-         <string>Query</string>
+         <string>清地图</string>
         </property>
        </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="usrInfoEdit"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="baseVsTrueBtn">
-        <property name="text">
-         <string>Base vs True</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="apiVsTrueBtn">
-        <property name="text">
-         <string>API vs True</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="apiPosBtn">
-        <property name="text">
-         <string>API Pos</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
       </item>
      </layout>
     </item>
