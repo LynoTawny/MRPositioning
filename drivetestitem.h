@@ -31,7 +31,7 @@ typedef struct
 {
     double lng;
     double lat;
-    double radius;
+    double radius;//本来想用来表示基站的覆盖半径，为了方便，将这个值用来保存根据场强计算出的半径
     double pos_x;
     double pos_y;
 }base_info_t;
@@ -75,6 +75,8 @@ public:
 
     void setOurPositioningResult(double lng, double lat, double x, double y);
     void getOurPositioningResult(double *lng, double *lat, double *x, double *y);
+
+    void setBaseRadius(int i, double radius);
 
     void setBaseDBHandler(BaseDBHandler *handler);
 

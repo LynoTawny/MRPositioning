@@ -92,6 +92,7 @@ DriveTestItem::~DriveTestItem()
 {
     delete this->coord_trans_manager;
     delete this->base_query_manager;
+    delete this->positioning_manager;
 
     if(p_xml_data)
         free(p_xml_data);
@@ -396,7 +397,7 @@ void DriveTestItem::multiBasePositioning(void)
 
             this->api_lat = lat_value.toVariant().toString().toDouble();
             this->api_lng = lon_value.toVariant().toString().toDouble();
-            this->api_radius = radius_value.toVariant().toString().toDouble();
+            //this->api_radius = radius_value.toVariant().toString().toDouble();
 
             apiPosReadyFlag = true;
             //qDebug("LINE:%d; lng:%.6g; lat:%.6g; radius:%.6g", __LINE__, this->api_lng, this->api_lat, this->api_radius);
@@ -440,4 +441,11 @@ void DriveTestItem::getOurPositioningResult(double *lng, double *lat, double *x,
 void DriveTestItem::setBaseDBHandler(BaseDBHandler *handler)
 {
     this->dbHandler = handler;
+}
+
+void DriveTestItem::setBaseRadius(int i, double radius)
+{
+    base_info_t base = this->base_infos.at(i);
+    base.radius = radius;
+    base_infos[i] = base;
 }

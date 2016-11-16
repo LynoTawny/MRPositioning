@@ -5,6 +5,9 @@
 #include "oku_hata.h"
 #include "field_func.h"
 //#include "monitor.h"
+#include <drivetestitem.h>
+
+extern DriveTestItem * curItem;
 using namespace Eigen;
 using namespace std;
 
@@ -22,8 +25,8 @@ int   filed_unit_clac(MatrixXd &mat_unit,MatrixXd &mat_res,int bsi,int bsj)
      double Xi,Xj,Yi,Yj,Di,Dj;
      double Am,Bm,Cm;
      double a,b,c;
-     cout <<"BASE  :"<<bsi<<","<<bsj<<endl;
-     cout << mat_unit<<endl;
+//     cout <<"BASE  :"<<bsi<<","<<bsj<<endl;
+//     cout << mat_unit<<endl;
      Xi = mat_unit(0,0);
      Yi = mat_unit(0,1);
      Di = mat_unit(0,2);
@@ -97,7 +100,7 @@ int   filed_unit_clac(MatrixXd &mat_unit,MatrixXd &mat_res,int bsi,int bsj)
     double res = b*b - 4*a*c;
     if(res < 0)
     {
-      fprintf(stderr,"%s\n","(ax2+bx+c=0) has no answer");
+    //  fprintf(stderr,"%s\n","(ax2+bx+c=0) has no answer");
       return -1;
     }  
  
@@ -199,7 +202,7 @@ void  alg_mainbs_calc(MatrixXd &mat_res,VectorXd &ms_pos)
        tmp_dist0 = pow(x1-x2,2)+pow(y1-y2,2);
        if(tmp_dist0 < min0_dist)
        {
-         printf(":CALC MIN DIST:\n");
+ //        printf(":CALC MIN DIST:\n");
          min0_dist = tmp_dist0;
          x1bak = x1;
          x2bak = x2;
@@ -282,35 +285,10 @@ void alg_converge_calc(MatrixXd &mat_circle,VectorXd &mat_rxlevel,int bs_num,Mat
       bs.row(1) = mat_circle.row(1);
       calc_circles_point(bs,mpoint);
 
-/*************ratio test************/
-/*      square_val = pow(bs(0,2),2) + pow(bs(1,2),2);
-      ratio1 = pow(bs(0,2),2)/square_val;
-      ratio2 = pow(bs(1,2),2)/square_val;
-
-
-      mid_point(0) = mpoint(1,0)*ratio2 + mpoint(0,0)*ratio1;
-      mid_point(1) = mpoint(1,1)*ratio2 + mpoint(0,1)*ratio1;
-      
-      sum_x += mid_point(0); 
-      sum_y += mid_point(1);
- 
-      if(relation_arr[0][1])
-      {
-         sum_x += (mat_res(0,0)+mat_res(1,0));
-         sum_y += (mat_res(0,1)+mat_res(1,1));
-         ms_pos(0) = sum_x/3;
-         ms_pos(1) = sum_y/3;
-      }
-      else
-      { 
-         ms_pos(0) = sum_x;
-         ms_pos(1) = sum_y;
-      }
-*/
-/***************ratio end************/
-      
+     
       sum_x += (mpoint(0,0)+mpoint(1,0));
       sum_y += (mpoint(0,1)+mpoint(1,1));
+     
       if(relation_arr[0][1])
       {
          sum_x += (mat_res(0,0)+mat_res(1,0));
@@ -323,6 +301,7 @@ void alg_converge_calc(MatrixXd &mat_circle,VectorXd &mat_rxlevel,int bs_num,Mat
          ms_pos(0) = sum_x/2;
          ms_pos(1) = sum_y/2;
       }
+     
      return;
      break;
     case 3:
@@ -345,7 +324,7 @@ void alg_converge_calc(MatrixXd &mat_circle,VectorXd &mat_rxlevel,int bs_num,Mat
       printf("WRONG BS NUM, TAKE CARE!!!\n");
      break;
   }
-  printf("HHHHHHHHHHH 1\n");
+  //printf("HHHHHHHHHHH 1\n");
   
   #define ANCHOR_COUNT 10000
 
@@ -353,6 +332,7 @@ void alg_converge_calc(MatrixXd &mat_circle,VectorXd &mat_rxlevel,int bs_num,Mat
   MatrixInt res_flag = MatrixInt::Zero(1,60);
   MatrixXd mid_res = MatrixXd::Zero(cal_cnt,2);
   double two_bs_dist = 0;
+
   for(i=0;i<cal_cnt;i++)
   {
      m = matbs(i,0);
@@ -386,7 +366,7 @@ void alg_converge_calc(MatrixXd &mat_circle,VectorXd &mat_rxlevel,int bs_num,Mat
      }
      else if(inter_point_flag[m][n] != ANCHOR_COUNT)
      {
-      printf("point flag =%d,i=%d\n",inter_point_flag[m][n],i);
+   //   printf("point flag =%d,i=%d\n",inter_point_flag[m][n],i);
       mid_res.row(i) = mid_res.row(inter_point_flag[m][n]-1); 
       mid_point = mid_res.row(inter_point_flag[m][n]-1);
      }
@@ -397,7 +377,7 @@ void alg_converge_calc(MatrixXd &mat_circle,VectorXd &mat_rxlevel,int bs_num,Mat
      for(j=0;j<2;j++)
      {
       
-     printf("HHHHHH222,i = %d,[m,n,q]=[%d,%d,%d],relaiton[m,n]=%d\n",i,m,n,q,relation_arr[m][q]);
+    // printf("HHHHHH222,i = %d,[m,n,q]=[%d,%d,%d],relaiton[m,n]=%d\n",i,m,n,q,relation_arr[m][q]);
      if(relation_arr[m][q] != 0)
      {
        double dist1,dist2;
@@ -420,10 +400,10 @@ void alg_converge_calc(MatrixXd &mat_circle,VectorXd &mat_rxlevel,int bs_num,Mat
     }
   }  
 
-   cout <<"MIDDLE POINT BETWEEN CIRCLES:"<<endl;
-   cout <<mid_res<<endl;
-   cout <<"RES_FLAG ARRAY:"<<endl;
-   cout <<res_flag<<endl; 
+//   cout <<"MIDDLE POINT BETWEEN CIRCLES:"<<endl;
+ //  cout <<mid_res<<endl;
+ //  cout <<"RES_FLAG ARRAY:"<<endl;
+ //  cout <<res_flag<<endl;
    int total_used_point = 0;
    for(i=0;i<g_row_cnt;i++)
    {
@@ -449,6 +429,8 @@ void alg_converge_calc(MatrixXd &mat_circle,VectorXd &mat_rxlevel,int bs_num,Mat
    }
    ms_pos(0) = sum_x/total_used_point;
    ms_pos(1) = sum_y/total_used_point;
+
+   calc_total_ratio(mat_circle,bs_num,ms_pos);
 }      
 
 void  filed_calc_pos(MatrixXd &STATEA,VectorXd &mat_rxlevel,int rows,double  aoa,double toa,VectorXd &ms_pos)
@@ -488,8 +470,8 @@ void  filed_calc_pos(MatrixXd &STATEA,VectorXd &mat_rxlevel,int rows,double  aoa
         mat_unit.row(0) = STATEA.row(i);
         mat_unit.row(1) = STATEA.row(j);
         filed_unit_clac(mat_unit,mat_res,i,j);
-        cout << "====INTERCOURSE POINT SHOW===="<<endl;
-        cout << mat_res << endl;
+  //      cout << "====INTERCOURSE POINT SHOW===="<<endl;
+  //      cout << mat_res << endl;
        }
      }
 //#define ALG_AVR_CALC 1
@@ -527,12 +509,75 @@ void diff_dist(double x1,double y1,double x2,double y2)
   printf("======DIFF DIST : [%.6f]===\n",sqrt(pow(x1-x2,2)+pow(y1-y2,2)));
 }
 
+void bubble_sort(double *unsorted,int length,int *index)
+ {
+	 for (int i = 0; i < length; i++)
+	{
+		for (int j = i; j < length; j++)
+		{
+		 if (unsorted[i] > unsorted[j])
+		 {
+				double temp = unsorted[i];
+				unsorted[i] = unsorted[j];
+				unsorted[j] = temp;
+				
+				int temp2 = index[i];
+				index[i] = index[j];
+				index[j] = temp2;
+		 }
+		}
+	}
+ }
+
+void dump_sort_res(double *pdata,int num)
+{
+    printf("**************DIST**************\n");
+    for(int i=0;i<num;i++)
+    {
+      printf("%.6f\n",pdata[i]);
+    }
+    printf("*************END******************\n");
+}
+	
+double get_bs_dist(MatrixXd &bs,int bs_num)
+{
+	 int i,j;
+	 double total_record[MAX_BS_RECORD]={0,};
+	 int index_record[MAX_BS_RECORD]={0,};
+	 memset(total_record,0,sizeof(total_record));
+	 
+	 for(i=0;i<bs_num;i++)
+	 {
+	    index_record[i] = i;
+	 }
+	 for(i=0;i<bs_num;i++)
+	 {
+	   for(j=0;j<bs_num;j++)
+	   {
+		   if(i == j)
+	       {
+			   continue;
+		   }
+		   total_record[i] += calc_2point_dist(bs(i,0),bs(i,1),bs(j,0),bs(j,1));
+	   }
+	 }
+         bubble_sort(total_record,bs_num,index_record);
+         
+ //        dump_sort_res(total_record,bs_num);
+
+         return (total_record[bs_num-1] - total_record[0]);
+}
+
+
 
 double bs_pos[30][2];
 char   pos_arr[1024];
 int    pos_val = 0; 
+double prev_x = 0;
+double prev_y = 0;
 
 static int init_flag = 0;
+static int judge_flag = 0;
 int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type)
 {
    double dist = 0;
@@ -540,7 +585,7 @@ int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type)
    int   bs_num;
  
    bs_data_t  *pbs = NULL;
-   MatrixXd bs=MatrixXd::Zero(MAX_BS_RECORD,3);
+   MatrixXd bs=MatrixXd::Zero(MAX_BS_RECORD+1,3);
  
   
 //   struct pos_longlati_t pos_lb[MAX_BS_RECORD];
@@ -590,29 +635,10 @@ int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type)
    if((NULL == pdata) ||(NULL == ms_pos))
    {
      fprintf(stderr,"%s [%s]\n","NULL pointer in ",__FUNCTION__);
+     return 0;
    }
    ptr = (xml_data_t*)pdata;
    bs_num = ptr->bs_num;
-#if 0
-   bs(0,0) = 11.1480;
-   bs(0,1) = 14.4595;
-   bs(0,2) = 14.3427;
-   bs(1,0) = 31.1650;
-   bs(1,1) = 56.8640;
-   bs(1,2) = 17.6754;
-   bs(2,0) = 23.3625;
-   bs(2,1) = 20.5636;
-   bs(2,2) = 24.3042;
-   bs(3,0) = 71.0031;
-   bs(3,1) = 32.5116;
-   bs(3,2) = 14.8098;
-   bs(4,0) = 8.8102;
-   bs(4,1) = 44.6248;
-   bs(4,2) = 13.1075;
-   bs_num = 5;
-   ptr->aoa = ptr->toa = -1;
-#endif
-
    if(bs_num < 1)
    {
     fprintf(stdout,"%s\n","bs data not good");
@@ -620,14 +646,11 @@ int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type)
    }
  
  #if 1 
-   dump_bs_info(ptr);
+  // dump_bs_info(ptr);
 
    pbs = ptr->bs_data;
- 
-   // start 坐标转换
-//   memset(pos_lb,0,sizeof(pos_lb));
-//   memset(pos_xy,0,sizeof(pos_xy));
-    bs_num = bs_num > MAX_BS_RECORD ? MAX_BS_RECORD : bs_num;
+
+   bs_num = bs_num > MAX_BS_RECORD ? MAX_BS_RECORD : bs_num;
 
 //   pos_lb[0].longti = ptr->true_lng;
 //   pos_lb[0].lati   = ptr->true_lat;
@@ -658,19 +681,84 @@ int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type)
              bs(i,2) = cost_hata_simple(pbs[i].rxlevel,pbs[i].freq);
     }
 #endif
-   cout <<"-----SHOW BS STRUCT [x y dist]-----"<<endl;
-   cout << bs <<endl;
+
+   //保存计算出的半径到DriveItem
+    for(int i = 0; i < bs_num; i++)
+    {
+        if(curItem == NULL) break;
+        curItem->setBaseRadius(i, bs(i,2));
+    }
+//   cout <<"-----SHOW BS STRUCT [x y dist]-----"<<endl;
+//   cout << bs <<endl;
 
    VectorXd ms(2);
    ms<<0,0;
    memset(relation_arr,0,sizeof(relation_arr));
    filed_calc_pos(bs,mat_rxlevel,bs_num,ptr->aoa,ptr->toa,ms); //x,y ->xiaochuang
 
-   calc_total_ratio(bs,bs_num,ms);
+    
+   for(int i=0;i<bs_num;i++)
+   {  
+      double tdist = calc_2point_dist(bs(i,0),bs(i,1),ms(0),ms(1));
+    //  printf("BS[%d]-[real-dist=%.6f]=[calc-dist=%.6f,R=%.6f]\n",i,calc_2point_dist(bs(i,0),bs(i,1),pos_xy[0].x,pos_xy[0].y),tdist,bs(i,2));
+   }   
 
-   ms_pos->pos_x = ms(0);
-   ms_pos->pos_y = ms(1);
+   double max_dist = 0;
+   double r_avr = 0;
+   for(int i=0;i<bs_num;i++)
+   {
+     r_avr += bs(i,2);
+   }
+   r_avr = r_avr/bs_num;
+
+   max_dist = get_bs_dist(bs,bs_num);
+   cout<<"=========max_dist ="<<max_dist <<endl;
+   cout<<"=========Ravr     = "<<r_avr<<endl;
+   if(judge_flag)
+   {
+     double sina = (ms(1) - prev_y)/calc_2point_dist(ms(0),ms(1),prev_x,prev_y);
+     double cosa = (ms(0) - prev_x)/calc_2point_dist(ms(0),ms(1),prev_x,prev_y);
+     prev_x = ms_pos->pos_x = 50 * cosa + prev_x;
+     prev_y = ms_pos->pos_y = 50 * sina + prev_y;
+   }else{
+     ms_pos->pos_x = ms(0);
+     ms_pos->pos_y = ms(1);
+   }
+   if((max_dist < 1500) && (r_avr < 200))
+   {
+     prev_x =ms_pos->pos_x = ms(0);
+     prev_y =ms_pos->pos_y = ms(1);
+     judge_flag = 1;
+     cout<<"----------JUDGE POINT ="<<pos_val+1<<endl;
+   }
+   pos_val++;
+/*   
    cout << "##MS_POSITION:[ "<<ms_pos->pos_x<<","<<ms_pos->pos_y<<" ]"<<endl;   
+   
+   diff_dist(ms_pos->pos_x,ms_pos->pos_y,pos_xy[0].x,pos_xy[0].y);
+
+   bs_pos[pos_val][0]=ms_pos->pos_x;
+   bs_pos[pos_val][1]=ms_pos->pos_y;
+   pos_val++;
+   if(pos_val >= 20)
+   {
+       printf("BEGIN DRAW LINE \n");
+       int cnt_pos = 0;
+       int tmp_pos = 0;
+       for(int i =0 ;i<pos_val-1;i++){
+          tmp_pos = sprintf(pos_arr+cnt_pos,"%.6f,%.6f|",bs_pos[i][0],bs_pos[i][1]);
+          cnt_pos += tmp_pos;
+       }
+       tmp_pos = sprintf(pos_arr+cnt_pos,"%.6f,%.6f",bs_pos[pos_val-1][0],bs_pos[pos_val-1][1]);
+       printf("all_pos = [%s]\n",pos_arr);
+       struct pos_xy_t pos_xy[30];
+       convert_xy_lb(pos_xy,pos_val,pos_arr);
+       show_multi_points();
+       exit(0);
+   }
+*/
+ // show_xy_func(ms_pos->pos_x,ms_pos->pos_y);
+
 
    return 0;
 }

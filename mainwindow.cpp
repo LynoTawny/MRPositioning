@@ -13,6 +13,18 @@
 #include <QNetworkReply>
 
 const double EARTH_RADIUS = 6371.004;//地球半径
+DriveTestItem * curItem = NULL;
+
+extern int    pos_val;
+extern double prev_x;
+extern double prev_y;
+
+void initPositionCal(void)
+{
+    pos_val = 0;
+    prev_x = 0;
+    prev_y = 0;
+}
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -20,17 +32,18 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    //设置代理服务器
     QNetworkProxy proxy;
     proxy.setType(QNetworkProxy::HttpProxy);//设置类型
     proxy.setHostName("119.6.136.122");//设置代理服务器地址
     proxy.setPort(80);//设置端口
-//    proxy.setUser("xxx");//设置用户名,可以不填写
-//    proxy.setPassword("xxx");//设置，可以不填写
 //    QNetworkProxy::setApplicationProxy(proxy);
+    qDebug() << getNetIP();
 
     ui->webView->setUrl(QUrl("qrc:/html/map.html"));
+    QWebPage *page = ui->webView->page();
+    connect(page, SIGNAL(loadStarted()), this, SLOT(doLoad()));
 
-    qDebug() << getNetIP();
 
     //QString dbPath("D:/MR Sample/DriveTest/base.db");
     QString dbPath("./base.db");
@@ -38,15 +51,23 @@ MainWindow::MainWindow(QWidget *parent) :
     this->dbHandler->openBaseDB();
 
     ui->showBasePosBtn->hide();
+    ui->ourPosBtn->setEnabled(false);
+    ui->outVsTrueBtn->setEnabled(false);
+
 //    ui->preprocessBtn->hide();
     ui->queryBtn->hide();
     ui->usrInfoEdit->hide();
 //    ui->apiPosBtn->hide();
 //    ui->apiVsTrueBtn->hide();
     ui->baseVsTrueBtn->hide();
-    ui->textBrowser->hide();
     ui->clearBtn->hide();
     ui->truePosBtn->hide();
+
+    this->statusLabel = new QLabel;
+    this->statusLabel->setMinimumSize(this->statusLabel->sizeHint());
+    this->statusLabel->setAlignment(Qt::AlignHCenter);
+    this->statusLabel->setText(tr("点击\"打开路测\"，选择文件"));
+    ui->statusBar->addWidget(this->statusLabel);
 }
 
 MainWindow::~MainWindow()
@@ -62,6 +83,10 @@ void MainWindow::on_clearBtn_clicked()
 
 void MainWindow::on_drTstRsltBtn_clicked()
 {
+    initPositionCal();
+    on_clearBtn_clicked();
+    itemList.clear();
+
     QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "D:/MR Sample/DriveTest");
     //QString drTstFilePath = QFileDialog::getOpenFileName(this, tr("Open File"), "./DriveTest");
     qDebug() << drTstFilePath;
@@ -71,6 +96,7 @@ void MainWindow::on_drTstRsltBtn_clicked()
         qDebug() << "fail to open drive test file.";
         return;
     }
+    this->statusLabel->setText(tr("读文件中。。。"));
 
     QTextStream in(&file);
     QString line = in.readLine();
@@ -103,38 +129,23 @@ void MainWindow::on_drTstRsltBtn_clicked()
 //    QWebFrame * webFrame = ui->webView->page()->mainFrame();
 //    webFrame->evaluateJavaScript(QString("showTheLocaltion(\"114.426,34.527|117.554,36.446|119.852,30.554\",1);"));
 
+    this->statusLabel->setText(tr("读文件完成！"));
     on_showBasePosBtn_clicked();
+    ui->ourPosBtn->setEnabled(true);
 }
+
+typedef struct
+{
+    base_info_t base_info;//基站信息
+    QVector<int> meas_point_set;//保存接收到该基站的测量点序号
+}super_base_info_t;
 
 void MainWindow::on_showBasePosBtn_clicked()
 {
     on_clearBtn_clicked();
 
-#if 0
-    QString points;
-    foreach (DriveTestItem *item, itemList)
-    {
-        if(!item->isBaseInfoReady())
-        {
-            item->queryBaseInformation();
-        }
-
-        QList<base_info_t> & base_infos = item->getBaseInfos();
-        qDebug() << "FILE:" << __FILE__ << "LINE:" << __LINE__ << "query base information done.";
-
-        //画基站位置
-        foreach (base_info_t base, base_infos)
-        {
-            points.append(QString::number(base.lng, 'g', 9));
-            points.append(",");
-            points.append(QString::number(base.lat, 'g', 9));
-            points.append("|");
-        }
-    }
-    QWebFrame * webFrame = ui->webView->page()->mainFrame();
-    webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
-#else
     QMap<QString, base_info_t> bases;
+    this->statusLabel->setText(tr("正在查询基站经纬度，稍后。。。"));
 
     foreach (DriveTestItem *item, itemList) {
 
@@ -160,19 +171,22 @@ void MainWindow::on_showBasePosBtn_clicked()
             }
         }
     }
-#endif
-    QWebFrame * webFrame = ui->webView->page()->mainFrame();
+    this->statusLabel->setText(tr("查询基站位置完成！点击\"定位位置\"。"));
+
+    //显示所有基站位置
+    QString points;
     for(QMap<QString, base_info_t>::iterator it = bases.begin(); it != bases.end(); it++)
     {
-        QString point;
-        point.append(QString::number(it.value().lng, 'g', 9));
-        point.append(",");
-        point.append(QString::number(it.value().lat, 'g', 9));
-
-        QString str = QString("addBaseLocation(\"%1\", \"%2\")").arg(point).arg(it.key());
-        webFrame->evaluateJavaScript(str);
-        //qDebug() << str;
+        points.append(QString::number(it.value().lng, 'g', 9));
+        points.append(",");
+        points.append(QString::number(it.value().lat, 'g', 9));
+        points.append("|");
     }
+    points.chop(1);
+
+    QWebFrame * webFrame = ui->webView->page()->mainFrame();
+    QString str = QString("showAllBaseLocation(\"%1\")").arg(points);
+    webFrame->evaluateJavaScript(str);
 }
 
 void MainWindow::on_apiPosBtn_clicked()
@@ -224,10 +238,9 @@ void MainWindow::on_apiPosBtn_clicked()
 
 void MainWindow::on_ourPosBtn_clicked()
 {
-    on_clearBtn_clicked();
-
     QString points;
 
+    this->statusLabel->setText(tr("正在计算位置，稍等。。。"));
     foreach (DriveTestItem *item, itemList)
     {
         if(item->isOurPosReady()!= true)
@@ -243,6 +256,7 @@ void MainWindow::on_ourPosBtn_clicked()
 
             xml_data_t *p_data = item->get_xml_data();
             ms_pos_t ms_pos;
+            curItem = item;
             get_ms_pos(p_data, &ms_pos, 0);
 
             double lng, lat;
@@ -259,6 +273,7 @@ void MainWindow::on_ourPosBtn_clicked()
         points.append("|");
     }
     points.chop(1);
+    this->statusLabel->setText(tr("计算位置完成！"));
 
 //    qDebug() << "FILE:" << __FILE__ << "LINE:" << __LINE__ << ":" << points;
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
@@ -266,14 +281,11 @@ void MainWindow::on_ourPosBtn_clicked()
 
     on_truePosBtn_clicked();
 
-    if(!ui->textBrowser->isHidden())
-        ui->textBrowser->hide();
+    ui->outVsTrueBtn->setEnabled(true);
 }
 
 void MainWindow::on_truePosBtn_clicked()
 {
-//    on_clearBtn_clicked();
-
     QString points;
     foreach (DriveTestItem *item, itemList)
     {
@@ -315,9 +327,6 @@ double MainWindow::GetDistanceByXY(double x1, double y1, double x2, double y2)
 
 void MainWindow::on_apiVsTrueBtn_clicked()
 {
-    if(ui->textBrowser->isHidden())
-        ui->textBrowser->show();
-
     QString str;
     str.append("序号\t真实经度\t真实纬度\t定位经度\t定位纬度\t距离");
     ui->textBrowser->append(str);
@@ -424,9 +433,6 @@ void MainWindow::convertXY2LonLat(double pos_x, double pos_y, double *lng, doubl
 
 void MainWindow::on_outVsTrueBtn_clicked()
 {
-    if(ui->textBrowser->isHidden())
-        ui->textBrowser->show();
-
     QString str;
     str.append("序号\t真实经度\t真实纬度\t定位经度\t定位纬度\t距离");
     ui->textBrowser->append(str);
@@ -721,7 +727,7 @@ void MainWindow::rawDataFill(void)
 //        vector.append(p->cell_list[0]);
 //        for(int i = 1; i < p->cell_count; i++)
 //        {
-////            if(isCellRawDataValid(&p->cell_list[i]))
+//            if(isCellRawDataValid(&p->cell_list[i]))
 //            if(isCellRawDataCorrect(&p->cell_list[i]))
 //            {
 //                vector.append(p->cell_list[i]);
@@ -756,7 +762,8 @@ void MainWindow::rawDataFill(void)
 
 void MainWindow::rawDataOutputNewFile(void)
 {
-    QFile file(QString("D:/MR Sample/DriveTest/PreprocessOK.txt"));
+    QString fileName = "D:/MR Sample/DriveTest/PreprocessOK_" + QDate::currentDate().toString("yyyy-MM-dd") + ".txt";
+    QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
         qDebug() << "fail to open write only file.";
@@ -800,11 +807,6 @@ void MainWindow::rawDataFinalyCheck(void)
 
 void MainWindow::on_queryBtn_clicked()
 {
-    if(ui->textBrowser->isHidden())
-        ui->textBrowser->show();
-    else
-        ui->textBrowser->hide();
-
 }
 
 void MainWindow::on_baseVsTrueBtn_clicked()
@@ -846,3 +848,45 @@ void MainWindow::on_baseVsTrueBtn_clicked()
 
     on_truePosBtn_clicked();
 }
+
+void MainWindow::doLoad()
+{
+    QUrl url = ui->webView->page()->mainFrame()->requestedUrl();
+    QString urlStr = url.toString();
+
+    int index = urlStr.split('/', QString::SkipEmptyParts).last().toInt() - 1;
+    //qDebug() << __FILE__ << __LINE__ << "测量点序号" << index;
+
+    QString points;
+
+    DriveTestItem *item = this->itemList.at(index);
+    if(item->isBaseInfoReady())
+    {
+        QList<base_info_t> &base_infos = item->getBaseInfos();
+        QList<base_meas_t> &meas_results = item->getResults();
+
+        int i = 0;
+        foreach (base_info_t base_info, base_infos) {
+            points.append(QString::number(base_info.lng, 'g', 9));
+            points.append(",");
+            points.append(QString::number(base_info.lat, 'g', 9));
+            points.append(",");
+            points.append(QString::number(base_info.radius));
+            points.append(",");
+            points.append(QString::number(meas_results.at(i).base_meas_rslt.lac));
+            points.append(",");
+            points.append(QString::number(meas_results.at(i).base_meas_rslt.ci));
+            points.append(",");
+            points.append(QString::number(meas_results.at(i).base_meas_rslt.rxlev));
+            points.append("|");
+            i++;
+        }
+    }
+    points.chop(1);
+
+//    qDebug() << __FILE__ << __LINE__ << points;
+    QString str = QString("addBaseLocation(\"%1\")").arg(points);
+    QWebFrame * webFrame = ui->webView->page()->mainFrame();
+    webFrame->evaluateJavaScript(str);
+}
+

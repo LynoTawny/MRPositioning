@@ -62,5 +62,6 @@ struct pos_xy_t{
 //
 
 int get_ms_pos(void *pdata,ms_pos_t *ms_pos,int type);
+int get_ms_pos2(void *pdata,ms_pos_t *ms_pos,int type);
 
 #endif

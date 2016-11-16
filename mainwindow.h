@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QLabel>
 #include <basedbhandler.h>
 #include "drivetestitem.h"
 
@@ -41,6 +42,7 @@ private slots:
 
     void on_baseVsTrueBtn_clicked();
 
+    void doLoad();
 private:
     Ui::MainWindow *ui;
     QList<DriveTestItem *> itemList;
@@ -56,6 +58,7 @@ private:
     QString getNetIP(void);
     BaseDBHandler * dbHandler;
     QList<meas_point_raw_data_t *> measPointList;
+    QLabel *statusLabel;
 };
 
 #endif // MAINWINDOW_H

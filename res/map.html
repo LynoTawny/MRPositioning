@@ -23,7 +23,7 @@
     var top_left_control = new BMap.ScaleControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});
     map.addControl(top_left_control);
       
-	map.enableScrollWheelZoom(true);     //开启鼠标滚轮缩放
+	map.enableScrollWheelZoom(true);     //开启鼠标滚轮缩放    
 
 // 经纬度接口
 function showTheLocaltion(allpointinfo,type)
@@ -48,6 +48,10 @@ function showTheLocaltion(allpointinfo,type)
                              });
             marker1.setIcon(myIcon);
          }
+         else
+         {
+            marker1.addEventListener("click", doClickMarker);
+         }    
            
         map.addOverlay(marker1);              // 将标注添加到地图中
         var label = new BMap.Label(i+1,{offset:new BMap.Size(20,-10)});
@@ -62,12 +66,10 @@ function showTheLocaltion(allpointinfo,type)
     if(type == 1)
     {
         drawWalkArea(allpointinfo,type);
-    }
-
-   
-    //map.panTo(marker1);
-    
+    }   
+    //map.panTo(marker1);    
 }
+
 //移动到指定经纬度
 function moveTheLocaltion(JD , WD)
 {
@@ -165,39 +167,136 @@ function toFixPoint(pointSet , type)
 
 var tileLayer = new BMap.TileLayer({isTransparentPng: true});
 
+//初始化网格
 tileLayer.getTilesUrl = function(tileCoord, zoom) {
     var x = tileCoord.x;
     var y = tileCoord.y;
     return "http://developer.baidu.com/map/jsdemo/img/border.png";
 }
 
+//新增网格
 function add_grid(){
     map.addTileLayer(tileLayer);
 }
 
+//删除网格
 function delete_grid(){
     map.removeTileLayer(tileLayer);
 }
 
-function addBaseLocation(pointArray, labelStr)
+//显示所有基站位置
+function showAllBaseLocation(allpointinfo)
 {
-    pointvalue = pointArray.split(',');
-    if(pointvalue.length != 2)
+    var pointArray = allpointinfo.split('|');
+    var points = [];  // 添加所有基站点位置
+    for(var i = 0; i < pointArray.length; i++)
     {
-         //格式出错
-         return 1;
+        pointvalue = pointArray[i].split(',');
+        if(pointvalue.length != 2)
+        {
+             //格式出错
+             return 1;
+        }
+        points.push(new BMap.Point(pointvalue[0],pointvalue[1]));
     }
-     var p = new BMap.Point(pointvalue[0],pointvalue[1]); //点位置
-     var marker1 = new BMap.Marker(p);  // 创建标注
-       
-    map.addOverlay(marker1);              // 将标注添加到地图中
     
-    var label = new BMap.Label(labelStr,{offset:new BMap.Size(20,-10)});
-    marker1.setLabel(label);
-    marker1.setTitle(pointvalue[0] + "," +pointvalue[1]);
-    map.centerAndZoom(new BMap.Point(pointvalue[0],pointvalue[1]), mapShowLevel );        
+    var options = {
+        size: BMAP_POINT_SIZE_BIG,
+        shape: BMAP_POINT_SHAPE_RHOMBUS,
+        color: '#d340c3'
+    };
+    
+    var pointCollection = new BMap.PointCollection(points, options);  // 初始化PointCollection
+    map.addOverlay(pointCollection);  // 添加Overlay
 }
 
+var overlays = [];
+// 在地图上显示参与计算的基站位置,格式：lng,lat,radius,lac,ci,rxlev|...
+function addBaseLocation(allpointinfo)
+{
+    while(overlays.length !== 0) {
+        map.removeOverlay(overlays.pop());
+    }
+    
+    var tmpArray = allpointinfo.split('|');
+    var usedPoints = [];
+    var unusedPoints = [];
+    for(var i = 0; i < tmpArray.length; i++)
+    {
+        pointvalue = tmpArray[i].split(',');
+        if(pointvalue.length != 6)
+        {
+             //格式出错
+             return 1;
+        }
+        var p = new BMap.Point(pointvalue[0],pointvalue[1]); //点位置
+        p.index = i;
+        p.radius = pointvalue[2];
+        p.lac = pointvalue[3];
+        p.ci = pointvalue[4];
+        p.rxlev = pointvalue[5];
+               
+        if(i < 6) {
+            usedPoints.push(p);
+            //画圆
+            var circle = new BMap.Circle(p, pointvalue[2], {strokeColor:"green", strokeWeight:2, strokeOpacity:0.5});
+            circle.setFillOpacity(0.01);
+            map.addOverlay(circle);
+            //保存marker1和circle,以便下一次画图是清除
+            overlays.push(circle);
+        } else {
+            unusedPoints.push(p);
+        }
+    }
+    
+    var usedPointOptions = {
+        size: BMAP_POINT_SIZE_BIG,
+        shape: BMAP_POINT_SHAPE_CIRCLE,
+        color: 'green'
+    };
+    
+    var unusedPointOptions = {
+        size: BMAP_POINT_SIZE_BIG,
+        shape: BMAP_POINT_SHAPE_CIRCLE,
+        color: 'yellow'
+    };
+
+    
+    var usedPointCollection = new BMap.PointCollection(usedPoints, usedPointOptions);  // 初始化PointCollection
+    usedPointCollection.addEventListener('click', doClickBase);
+    var unusedPointCollection = new BMap.PointCollection(unusedPoints, unusedPointOptions);  // 初始化PointCollection
+    unusedPointCollection.addEventListener('click', doClickBase);
+    overlays.push(usedPointCollection);
+    overlays.push(unusedPointCollection);
+    map.addOverlay(usedPointCollection);  // 添加Overlay
+    map.addOverlay(unusedPointCollection);
+}
+
+// 处理marker的单击事件
+function doClickMarker(click) {
+    //console.info(click.point); //获得被点击位置的经纬度
+    //console.info(click.target.getLabel().content); //获得被点击的marker的label的内容
+    
+    var content = click.target.getLabel().content.toString(); //content保存了测量点序号
+    location.href = content; //将content通过一个url发送给Qt
+    
+    //addBaseLocation("114.434859,30.4641974,200|114.434868,30.4650268,200|114.430991,30.4644528,200|114.430988,30.4639009,200|");
+}
+
+function doClickBase(click) {
+    //console.info(click.point.index); //测试给Point对象加的index
+    
+    //格式：lng,lat,radius,lac,ci,rxlev
+    var p = click.point;
+    
+    var opts = {
+        width : 250,     // 信息窗口宽度
+        height: 100,     // 信息窗口高度
+        title : "LAC: " + p.lac + "; CI: " + p.ci, // 信息窗口标题
+	}
+	var infoWindow = new BMap.InfoWindow("位置：" + p.lng + "," + p.lat + "；<br>半径：" + p.radius + "；场强：" + p.rxlev, opts);  // 创建信息窗口对象
+    map.openInfoWindow(infoWindow, click.point); //开启信息窗口
+}
 
 add_grid();
 
@@ -214,7 +313,7 @@ add_grid();
 //teststr = "114.426,34.527|117.554,36.446|119.852,30.554";
 //showTheLocaltion(teststr);
 //toFixPoint(teststr  , 1);
-//showTheLocaltion("114.426,34.527|117.554,36.446|119.852,30.554",1);
-//showTheLocaltion("114.434859,30.4641974|114.434868,30.4650268|114.430991,30.4644528|114.430988,30.4639009|114.431541,30.4627856|114.43071,30.4625067|114.430156,30.4622288|114.429324,30.461945|114.42849,30.4622226|114.427102,30.4622248|114.42738,30.4613873|114.42738,30.4602747|114.427662,30.4594421|114.428762,30.4594465|114.431261,30.4591768|114.431256,30.4594513|114.431539,30.4597333|114.430984,30.4613931|114.43099,30.4622322|114.432366,30.4625147|114.432369,30.4627889|114.432651,30.463067|114.433482,30.4628009|114.434033,30.4630769|",1);
-
+//showTheLocaltion("114.426,34.527|117.554,36.446|119.852,30.554",0);
+//showTheLocaltion("114.434859,30.4641974|114.434868,30.4650268|114.430991,30.4644528|114.430988,30.4639009|",0);
+//addBaseLocation("114.434859,30.4641974,200,7138,1234,-89|114.434868,30.4650268,300,7138,3456,-90|114.430991,30.4644528,400,7138,5678,-70");
 </script>
