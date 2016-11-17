@@ -72,6 +72,7 @@ public:
     bool isBaseInfoReady(void);
     bool isAPIPosReady(void);
     bool isOurPosReady(void);
+    bool isTruePosReady(void);
 
     void setOurPositioningResult(double lng, double lat, double x, double y);
     void getOurPositioningResult(double *lng, double *lat, double *x, double *y);

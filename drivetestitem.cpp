@@ -66,10 +66,13 @@ DriveTestItem::DriveTestItem(int line, QString &lineStr)
     this->coord_trans_manager = new QNetworkAccessManager(this);
     connect(coord_trans_manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(coordTransformFinishedSlot(QNetworkReply*)));
 
-    QNetworkRequest request(QUrl("http://api.map.baidu.com/geoconv/v1/"));
-    request.setHeader(QNetworkRequest::ContentTypeHeader,"application/x-www-form-urlencoded");
-    request.setHeader(QNetworkRequest::ContentLengthHeader,postArray.size());
-    this->coord_trans_manager->post(request, postArray);
+    if(this->true_wgs84_lat < 360 && this->true_wgs84_lng < 360)
+    {
+        QNetworkRequest request(QUrl("http://api.map.baidu.com/geoconv/v1/"));
+        request.setHeader(QNetworkRequest::ContentTypeHeader,"application/x-www-form-urlencoded");
+        request.setHeader(QNetworkRequest::ContentLengthHeader,postArray.size());
+        this->coord_trans_manager->post(request, postArray);
+    }
     //end
 
     // start mcc+mnc+lac+ci查询基站信息
@@ -419,6 +422,11 @@ bool DriveTestItem::isBaseInfoReady(void)
 bool DriveTestItem::isOurPosReady(void)
 {
     return this->ourPosReadyFlag;
+}
+
+bool DriveTestItem::isTruePosReady(void)
+{
+    return this->isTruePosValid;
 }
 
 void DriveTestItem::setOurPositioningResult(double lng, double lat, double x, double y)

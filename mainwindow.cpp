@@ -36,9 +36,9 @@ MainWindow::MainWindow(QWidget *parent) :
     //设置代理服务器
     QNetworkProxy proxy;
     proxy.setType(QNetworkProxy::HttpProxy);//设置类型
-    proxy.setHostName("119.6.136.122");//设置代理服务器地址
-    proxy.setPort(80);//设置端口
-//    QNetworkProxy::setApplicationProxy(proxy);
+    proxy.setHostName("127.0.0.1");//设置代理服务器地址
+    proxy.setPort(8087);//设置端口
+    //QNetworkProxy::setApplicationProxy(proxy);
     qDebug() << getNetIP();
 
     ui->webView->setUrl(QUrl("qrc:/html/map.html"));
@@ -309,16 +309,23 @@ void MainWindow::on_ourPosBtn_clicked()
 void MainWindow::on_truePosBtn_clicked()
 {
     QString points;
+    int i = 1;
     foreach (DriveTestItem *item, itemList)
     {
         double lat, lng;
 
-        item->getTrueBD09Coord(&lng, &lat);
-        //qDebug("LINE:%d; lng:%.9g; lat:%.9g;", __LINE__, lng, lat);
-        points.append(QString::number(lng, 'g', 9));
-        points.append(",");
-        points.append(QString::number(lat, 'g', 9));
-        points.append("|");
+        if(item->isTruePosReady())
+        {
+            item->getTrueBD09Coord(&lng, &lat);
+            //qDebug("LINE:%d; lng:%.9g; lat:%.9g;", __LINE__, lng, lat);
+            points.append(QString::number(lng, 'g', 9));
+            points.append(",");
+            points.append(QString::number(lat, 'g', 9));
+            points.append(",");
+            points.append(QString::number(i));
+            points.append("|");
+        }
+        i ++;
     }
 
     points.chop(1);
@@ -806,7 +813,7 @@ void MainWindow::rawDataOutputNewFile(QString rawDataFilePath)
         //str.append(QString("%1|").arg(p->no));
         str.append(QString(p->time));
         str.append("|");
-        str.append("114.430693,30.46479|");
+        str.append("361,361|");
         for(int i = 0; i < p->cell_count; i++)
         {
             str.append(QString("%1,").arg(p->cell_list[i].lac));

@@ -53,8 +53,9 @@ function showTheLocaltion(allpointinfo,type)
     var pointArray = allpointinfo.split('|');
     for(var i=0;i<pointArray.length;i++)
     {
+        var label;
         pointvalue = pointArray[i].split(',');
-        if(pointvalue.length != 2)
+        if(((type === 0) && (pointvalue.length !== 2)) && ((type === 1) && (pointvalue.length !== 3)))
         {
              //格式出错
              return 1;
@@ -63,6 +64,7 @@ function showTheLocaltion(allpointinfo,type)
          var marker1 = new BMap.Marker(p);  // 创建标注
          if(type === 1)
          {
+            label = new BMap.Label(pointvalue[2],{offset:new BMap.Size(20,-10)});
             marker1.setIcon(truePosIcon);
          }
          else
@@ -71,10 +73,10 @@ function showTheLocaltion(allpointinfo,type)
             marker1.addEventListener("click", doClickMarker);
             marker1.index = i;
             markers.push(marker1);
+            label = new BMap.Label(i+1,{offset:new BMap.Size(20,-10)});
          }    
            
         map.addOverlay(marker1);              // 将标注添加到地图中
-        var label = new BMap.Label(i+1,{offset:new BMap.Size(20,-10)});
         marker1.setLabel(label);
         marker1.setTitle(pointvalue[0] + "," +pointvalue[1]);
         if(i == 0)
@@ -390,6 +392,6 @@ function doClickBase(click) {
 //showTheLocaltion(teststr);
 //toFixPoint(teststr  , 1);
 //showTheLocaltion("114.426,34.527|117.554,36.446|119.852,30.554",0);
-//showTheLocaltion("114.434859,30.4641974|114.434868,30.4650268|114.430991,30.4644528|114.430988,30.4639009|",0);
+//showTheLocaltion("114.434859,30.4641974,1|114.434868,30.4650268,4|114.430991,30.4644528,5|114.430988,30.4639009,9|",0);
 //addBaseLocation("114.434859,30.4641974,200,7138,1234,-89|114.434868,30.4650268,300,7138,3456,-90|114.430991,30.4644528,400,7138,5678,-70");
 </script>
