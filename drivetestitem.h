@@ -9,6 +9,8 @@
 #include <QNetworkReply>
 #include <position_cal/field_func.h>
 #include <basedbhandler.h>
+#include <QSslConfiguration>
+#include <QSsl>
 
 #define TIME_BUF_LEN 32
 
@@ -109,6 +111,7 @@ private:
     QList<base_info_t> base_infos;
     int result_cnt;
     xml_data_t * p_xml_data;
+    QSslConfiguration config;
     QNetworkAccessManager *coord_trans_manager;//用于坐标转换
     QNetworkAccessManager *base_query_manager;//用于查询基站
     QNetworkAccessManager *positioning_manager;//用于多基站定位查询

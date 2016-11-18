@@ -38,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent) :
     proxy.setType(QNetworkProxy::HttpProxy);//设置类型
     proxy.setHostName("127.0.0.1");//设置代理服务器地址
     proxy.setPort(8087);//设置端口
-    //QNetworkProxy::setApplicationProxy(proxy);
+    QNetworkProxy::setApplicationProxy(proxy);
     qDebug() << getNetIP();
 
     ui->webView->setUrl(QUrl("qrc:/html/map.html"));
@@ -207,7 +207,7 @@ void MainWindow::on_showBasePosBtn_clicked()
     }
     points.chop(1);
 
-    qDebug() << __FILE__ << __LINE__ << points;
+    //qDebug() << __FILE__ << __LINE__ << points;
     QString str = QString("showAllBaseLocation(\"%1\")").arg(points);
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
     webFrame->evaluateJavaScript(str);
@@ -251,9 +251,11 @@ void MainWindow::on_apiPosBtn_clicked()
     }
     points.chop(1);
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
-    webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
+    webFrame->evaluateJavaScript(QString("clearResultPoints()"));
+    qDebug() << points;
+    webFrame->evaluateJavaScript(QString("coordTranslate(\"%1\",1,5)").arg(points));
 
-    on_truePosBtn_clicked();
+    //on_truePosBtn_clicked();
 
     //qDebug() << QString("showTheLocaltion(\"%1\",0)").arg(points);
 }
@@ -299,9 +301,8 @@ void MainWindow::on_ourPosBtn_clicked()
 
 //    qDebug() << "FILE:" << __FILE__ << "LINE:" << __LINE__ << ":" << points;
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
+    webFrame->evaluateJavaScript(QString("clearResultPoints()"));
     webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
-
-    on_truePosBtn_clicked();
 
     ui->outVsTrueBtn->setEnabled(true);
 }
@@ -547,22 +548,28 @@ void MainWindow::on_preprocessBtn_clicked()
     }
 
     rawDataRead(rawDataFilePath);
+    qDebug() << __FILE__ << "LINE:" << __LINE__ << "raw data read done.";
 
     int oldCnt = 0;
-    while(1)
-    {
-        rawDataFiltrate();
-        if(oldCnt == measPointList.count())
-        {
-            break;
-        }
-        else
-        {
-            oldCnt = measPointList.count();
-        }
-    }
+    rawDataFiltrate();
+//    while(1)
+//    {
+//        rawDataFiltrate();
+//        if(oldCnt == measPointList.count())
+//        {
+//            break;
+//        }
+//        else
+//        {
+//            oldCnt = measPointList.count();
+//        }
+//        qDebug() << __FILE__ << "LINE:" << __LINE__ << "filtrate loop.";
+//    }
+    qDebug() << __FILE__ << "LINE:" << __LINE__ << "raw data Filtrate done.";
     rawDataFill();
+    qDebug() << __FILE__ << "LINE:" << __LINE__ << "raw data Fill done.";
     rawDataOutputNewFile(rawDataFilePath);
+    qDebug() << __FILE__ << "LINE:" << __LINE__ << "raw data Output done.";
 }
 
 
@@ -662,12 +669,14 @@ bool isCellRawDataCorrect(cell_raw_data_t *p)
 void MainWindow::rawDataFiltrate(void)
 {
 //    bool isPointValid = true;
+    qDebug() << __FILE__ << "LINE:" << __LINE__ << "measPointList Count: " << measPointList.count();
 
+    int index = 1;
     for(QList<meas_point_raw_data_t *>::iterator it = measPointList.begin();
         it != measPointList.end(); it++)
     {
         meas_point_raw_data_t *p = *it;
-
+        qDebug() << __FILE__ << "LINE:" << __LINE__ << "index:" << index ++;
         //如果该测量点主服务小区数据残缺，扔掉该测量点
 //        if(!isCellRawDataValid(&p->cell_list[0]))
         if(!isCellRawDataCorrect(&p->cell_list[0]))
@@ -676,7 +685,6 @@ void MainWindow::rawDataFiltrate(void)
             measPointList.erase(it);
             continue;
         }
-
 //        for(int i = 0; i < p->cell_count; i++)
 //        {
 //            if(!isCellRawDataCorrect(&p->cell_list[i]))
@@ -704,14 +712,17 @@ void MainWindow::rawDataFiltrate(void)
                 vector.append(p->cell_list[i]);
             }
         }
-
+        qDebug() << __FILE__ << "LINE:" << __LINE__;
         //测量点中基站数目不够，删掉测量点
         if(vector.count() < 3)
         {
+
             free(p);
+            //*it = NULL;
             measPointList.erase(it);
             continue;
         }
+        qDebug() << __FILE__ << "LINE:" << __LINE__;
 
         //分配空间保存有效的基站测量结果
         meas_point_raw_data_t * p_data = (meas_point_raw_data_t *)malloc(sizeof(meas_point_raw_data_t) +
@@ -719,10 +730,12 @@ void MainWindow::rawDataFiltrate(void)
         p_data->no = p->no;
         strncpy(p_data->time, p->time, TIME_BUF_LEN - 1);
         p_data->cell_count = vector.count();
+        qDebug() << __FILE__ << "LINE:" << __LINE__;
         for(int i = 0; i < vector.count(); i++)
         {
             p_data->cell_list[i] = vector.at(i);
         }
+        qDebug() << __FILE__ << "LINE:" << __LINE__;
 
         //替换链表中的元素
         *it = p_data;
@@ -877,8 +890,6 @@ void MainWindow::on_baseVsTrueBtn_clicked()
 
     QWebFrame * webFrame = ui->webView->page()->mainFrame();
     webFrame->evaluateJavaScript(QString("showTheLocaltion(\"%1\",0)").arg(points));
-
-    on_truePosBtn_clicked();
 }
 
 void MainWindow::doLoad()

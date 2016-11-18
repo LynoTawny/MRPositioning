@@ -147,12 +147,9 @@ function clear()
 //type:0 转gps坐标 1转百度坐标
 function toFixPoint(pointSet , type)
 {
-    
     var resultstr="";
     var tmppoint;
     var projection = new BMap.MercatorProjection();
-   
-    
    
     var pointArray = pointSet.split('|');
     
@@ -302,6 +299,68 @@ function clearChoosedBases() {
     }
 }
 
+function clearResultPoints() {
+    while(markers.length !== 0) {
+        map.removeOverlay(markers.pop());
+    }
+}
+/*
+    @allpointinfo    格式：lng,lat|lng,lat|...
+    @srcType         源坐标类型 
+    @dstType         目标坐标类型
+    
+    坐标类型取值如下：
+    取值为如下：
+        1：GPS设备获取的角度坐标，wgs84坐标;
+        2：GPS获取的米制坐标、sogou地图所用坐标;
+        3：google地图、soso地图、aliyun地图、mapabc地图和amap地图所用坐标，国测局坐标;
+        4：3中列表地图坐标对应的米制坐标;
+        5：百度地图采用的经纬度坐标;
+        6：百度地图采用的米制坐标;
+        7：mapbar地图坐标;
+        8：51地图坐标
+*/
+function coordTranslate(allpointinfo, srcType, dstType)
+{
+    alert(allpointinfo);
+    var resultstr="";
+    var tmppoint;
+    var points = [];
+    var convertor = new BMap.Convertor();
+    var test = "Hello World.";
+   
+    var pointArray = allpointinfo.split('|');
+    
+    for(var i = 0; i < pointArray.length; i++)
+    {
+        //取出x和y的值
+        pointvalue = pointArray[i].split(',');
+       
+        if(pointvalue.length != 2)
+        {
+           //格式出错
+           return "error";
+        }
+        
+        var p = new BMap.Point(pointvalue[0],pointvalue[1]);
+        points.push(p);
+    }
+    
+    convertor.translate(points, srcType, dstType, function (data) {
+        alert(data.points);
+        if(data.status === 0) {
+            for(var i = 0; i < data.points.length; i++) {
+                resultstr += data.points[i].lng + "," + data.points[i].lat + "|";
+            }
+        }
+        
+        resultstr = resultstr.substring(0, resultstr.length-1);
+        alert(resultstr);
+        showTheLocaltion(resultstr, 0);
+    });
+    return resultstr;
+}
+
 // 处理marker的单击事件
 function doClickMarker(click) {
     //console.info(click.point); //获得被点击位置的经纬度
@@ -394,4 +453,5 @@ function doClickBase(click) {
 //showTheLocaltion("114.426,34.527|117.554,36.446|119.852,30.554",0);
 //showTheLocaltion("114.434859,30.4641974,1|114.434868,30.4650268,4|114.430991,30.4644528,5|114.430988,30.4639009,9|",0);
 //addBaseLocation("114.434859,30.4641974,200,7138,1234,-89|114.434868,30.4650268,300,7138,3456,-90|114.430991,30.4644528,400,7138,5678,-70");
+//coordTranslate("114.426,34.527|117.554,36.446|119.852,30.554", 1, 5);
 </script>

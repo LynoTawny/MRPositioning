@@ -89,6 +89,10 @@ DriveTestItem::DriveTestItem(int line, QString &lineStr)
     apiPosReadyFlag = false;
     ourPosReadyFlag = false;
     isTruePosValid = false;
+
+    this->config.setPeerVerifyMode(QSslSocket::VerifyNone);
+    this->config.setProtocol(QSsl::TlsV1_0);
+
 }
 
 DriveTestItem::~DriveTestItem()
@@ -105,14 +109,16 @@ void DriveTestItem::coordTransformFinishedSlot(QNetworkReply *reply)
 {
     QByteArray result;
 
-    if(reply->error() == QNetworkReply::NoError)
+    if(reply->error() != QNetworkReply::NoError)
     {
-        result = reply->readAll();
+        qDebug() << "LINE:" << __LINE__ << "; network error code:" << reply->errorString();
+        return;
     }
 
+    result = reply->readAll();
     reply->deleteLater();
 
-    //qDebug() << result;
+    qDebug() << "LINE:" << __LINE__ << result;
     QJsonParseError json_error;
     QJsonDocument parse_doucment = QJsonDocument::fromJson(result, &json_error);
     if(json_error.error == QJsonParseError::NoError)
@@ -148,7 +154,7 @@ void DriveTestItem::coordTransformFinishedSlot(QNetworkReply *reply)
                         this->true_bd09_lng = x_value.toVariant().toDouble();
                         this->true_bd09_lat = y_value.toVariant().toDouble();
                         this->isTruePosValid = true;
-                        //qDebug("LINE:%d %.15lg,%.15lg",__LINE__, this->true_bd09_lat, this->true_bd09_lng);
+                        qDebug("LINE:%d %.15lg,%.15lg",__LINE__, this->true_bd09_lat, this->true_bd09_lng);
                     }
                 }
                 else
@@ -329,6 +335,8 @@ void DriveTestItem::getApiPositioningResult(double *p_lng, double *p_lat, double
 
 void DriveTestItem::multiBasePositioning(void)
 {
+#if 0
+    //使用cellocation.com的api进行定位
     QNetworkReply *reply;
     QString urlStr;
     urlStr.append("http://api.cellocation.com/loc/?");
@@ -407,6 +415,112 @@ void DriveTestItem::multiBasePositioning(void)
             qDebug() << "LINE:" << __LINE__ << "; multi base positioning done.";
         }
     }
+#else
+    //使用google geolocation api定位
+
+    //组装 json 对象
+    QJsonObject json;
+    json.insert("homeMobileCountryCode", 460);
+    json.insert("homeMobileNetworkCode", 1);
+    json.insert("radioType", "gsm");
+    json.insert("considerIp", "false");
+
+    QJsonArray cellTowers;
+    for(int i = 0; i < this->results.count(); i++)
+    {
+        /* cell Tower Object
+        {
+          "cellId": 42,
+          "locationAreaCode": 415,
+          "mobileCountryCode": 310,
+          "mobileNetworkCode": 410,
+          "age": 0,
+          "signalStrength": -60,
+          "timingAdvance": 15
+        }
+        */
+        QJsonObject cellTowerObject;
+        base_meas_t mr = this->results.at(i);
+
+        cellTowerObject.insert("cellId", mr.base_meas_rslt.ci);
+        cellTowerObject.insert("locationAreaCode", mr.base_meas_rslt.lac);
+        cellTowerObject.insert("mobileCountryCode", 460);
+        cellTowerObject.insert("mobileNetworkCode", 1);
+        cellTowerObject.insert("age", 0);
+        cellTowerObject.insert("signalStrength", mr.base_meas_rslt.rxlev);
+
+        cellTowers.append(cellTowerObject);
+    }
+    json.insert("cellTowers", cellTowers);
+
+    QJsonArray wifiAccessPoints;
+    json.insert("wifiAccessPoints", wifiAccessPoints);
+
+    //json串转ByteArray
+    QJsonDocument document;
+    document.setObject(json);
+    QByteArray byte_array = document.toJson(QJsonDocument::Compact);
+
+    //QString json_str(byte_array);
+    //qDebug() << json_str;
+
+    //post 一个定位请求，内容就是json串
+    QNetworkAccessManager *manager = new QNetworkAccessManager();
+    QString urlStr("https://www.googleapis.com/geolocation/v1/geolocate?key=AIzaSyCb9CfrjPnrtedkMTZBS8ik7Q6-VF7qRn0");
+    QNetworkRequest request(QUrl(urlStr.toLatin1()));
+    request.setSslConfiguration(this->config);
+    request.setHeader(QNetworkRequest::ContentTypeHeader,"application/json");
+    QNetworkReply *reply = manager->post(request, byte_array);
+
+    //阻塞等待响应
+    QEventLoop eventLoop;
+    QObject::connect(manager, SIGNAL(finished(QNetworkReply *)), &eventLoop, SLOT(quit()));
+    eventLoop.exec();
+
+    //判断响应是否出错
+    if(reply->error() != QNetworkReply::NoError)
+    {
+        qDebug() << "LINE:" << __LINE__ << "; network error code:" << reply->errorString();
+        qDebug() << "LINE:" << __LINE__ << "; network error code:" << reply->error();//reply->errorString();
+        return;
+    }
+
+    //获取响应内容，存放到result
+    QByteArray result;
+    result = reply->readAll();
+    reply->deleteLater();
+
+    //qDebug() << "LINE:" << __LINE__ << " : " << result;
+
+    //解析返回的结果内容
+    QJsonParseError json_error;
+    QJsonDocument parse_doucment = QJsonDocument::fromJson(result, &json_error);
+    if(json_error.error == QJsonParseError::NoError)
+    {
+        if(parse_doucment.isObject())
+        {
+            QJsonObject obj = parse_doucment.object();
+
+            QJsonValue location = obj.take("location");
+            if(!location.isObject())
+            {
+                qDebug() << __FILE__ << __LINE__ << "error : no location value.";
+                return;
+            }
+
+            QJsonValue lat_value = location.toObject().take("lat");
+            QJsonValue lon_value = location.toObject().take("lng");
+
+
+            api_lat = lat_value.toVariant().toString().toDouble();
+            api_lng = lon_value.toVariant().toString().toDouble();
+            this->apiPosReadyFlag = true;
+
+            qDebug("LINE:%d; lng:%.9g; lat:%.9g; radius:%.9g", __LINE__, api_lng, api_lat, api_radius);
+            qDebug() << "LINE:" << __LINE__ << "; multi base positioning done.";
+        }
+    }
+#endif
 }
 
 bool DriveTestItem::isAPIPosReady(void)

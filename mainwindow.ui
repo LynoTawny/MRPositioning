@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,1,0,0">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,1,0,0,0,0">
       <item>
        <widget class="QPushButton" name="drTstRsltBtn">
         <property name="text">
@@ -42,6 +42,20 @@
        <widget class="QLabel" name="label">
         <property name="text">
          <string>依次点击1，2，3按钮</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="truePosBtn">
+        <property name="text">
+         <string>真实位置</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="apiPosBtn">
+        <property name="text">
+         <string>Google API</string>
         </property>
        </widget>
       </item>
