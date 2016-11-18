@@ -34,12 +34,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     //设置代理服务器
-    QNetworkProxy proxy;
-    proxy.setType(QNetworkProxy::HttpProxy);//设置类型
-    proxy.setHostName("127.0.0.1");//设置代理服务器地址
-    proxy.setPort(8087);//设置端口
-    QNetworkProxy::setApplicationProxy(proxy);
-    qDebug() << getNetIP();
+//    QNetworkProxy proxy;
+//    proxy.setType(QNetworkProxy::HttpProxy);//设置类型
+//    proxy.setHostName("127.0.0.1");//设置代理服务器地址
+//    proxy.setPort(8087);//设置端口
+//    QNetworkProxy::setApplicationProxy(proxy);
+//    qDebug() << getNetIP();
 
     ui->webView->setUrl(QUrl("qrc:/html/map.html"));
     QWebPage *page = ui->webView->page();
@@ -215,7 +215,16 @@ void MainWindow::on_showBasePosBtn_clicked()
 
 void MainWindow::on_apiPosBtn_clicked()
 {
+    QNetworkProxy oldProxy = QNetworkProxy::applicationProxy();
+    QNetworkProxy proxy;
+    proxy.setType(QNetworkProxy::HttpProxy);//设置类型
+    proxy.setHostName("127.0.0.1");//设置代理服务器地址
+    proxy.setPort(8087);//设置端口
+    QNetworkProxy::setApplicationProxy(proxy);
+    qDebug() << getNetIP();
+
     QString points;
+    int i = 0;
     foreach (DriveTestItem *item, itemList)
     {
         if(!item->isAPIPosReady())
@@ -258,6 +267,7 @@ void MainWindow::on_apiPosBtn_clicked()
     //on_truePosBtn_clicked();
 
     //qDebug() << QString("showTheLocaltion(\"%1\",0)").arg(points);
+    QNetworkProxy::setApplicationProxy(oldProxy);
 }
 
 void MainWindow::on_ourPosBtn_clicked()
@@ -669,20 +679,17 @@ bool isCellRawDataCorrect(cell_raw_data_t *p)
 void MainWindow::rawDataFiltrate(void)
 {
 //    bool isPointValid = true;
-    qDebug() << __FILE__ << "LINE:" << __LINE__ << "measPointList Count: " << measPointList.count();
 
-    int index = 1;
     for(QList<meas_point_raw_data_t *>::iterator it = measPointList.begin();
-        it != measPointList.end(); it++)
+        it != measPointList.end(); it)
     {
         meas_point_raw_data_t *p = *it;
-        qDebug() << __FILE__ << "LINE:" << __LINE__ << "index:" << index ++;
         //如果该测量点主服务小区数据残缺，扔掉该测量点
 //        if(!isCellRawDataValid(&p->cell_list[0]))
         if(!isCellRawDataCorrect(&p->cell_list[0]))
         {
             free(p);
-            measPointList.erase(it);
+            it = measPointList.erase(it);
             continue;
         }
 //        for(int i = 0; i < p->cell_count; i++)
@@ -712,17 +719,13 @@ void MainWindow::rawDataFiltrate(void)
                 vector.append(p->cell_list[i]);
             }
         }
-        qDebug() << __FILE__ << "LINE:" << __LINE__;
         //测量点中基站数目不够，删掉测量点
-        if(vector.count() < 3)
-        {
-
-            free(p);
-            //*it = NULL;
-            measPointList.erase(it);
-            continue;
-        }
-        qDebug() << __FILE__ << "LINE:" << __LINE__;
+//        if(vector.count() < 3)
+//        {
+//            free(p);
+//            it = measPointList.erase(it);
+//            continue;
+//        }
 
         //分配空间保存有效的基站测量结果
         meas_point_raw_data_t * p_data = (meas_point_raw_data_t *)malloc(sizeof(meas_point_raw_data_t) +
@@ -730,23 +733,22 @@ void MainWindow::rawDataFiltrate(void)
         p_data->no = p->no;
         strncpy(p_data->time, p->time, TIME_BUF_LEN - 1);
         p_data->cell_count = vector.count();
-        qDebug() << __FILE__ << "LINE:" << __LINE__;
         for(int i = 0; i < vector.count(); i++)
         {
             p_data->cell_list[i] = vector.at(i);
         }
-        qDebug() << __FILE__ << "LINE:" << __LINE__;
 
         //替换链表中的元素
         *it = p_data;
         free(p);
+        it ++;
     }
 }
 
 void MainWindow::rawDataFill(void)
 {
     for(QList<meas_point_raw_data_t *>::iterator it = measPointList.begin();
-        it != measPointList.end(); it++)
+        it != measPointList.end(); it)
     {
         meas_point_raw_data_t *p = *it;
         bool isPointValid = true;
@@ -762,11 +764,11 @@ void MainWindow::rawDataFill(void)
         if(!isPointValid)
         {
             free(p);
-            measPointList.erase(it);
+            it = measPointList.erase(it);
             continue;
         }
 
-
+        it ++;
         //先保存测量点中有效的基站测量结果到vector
 //        QVector<cell_raw_data_t> vector;
 //        vector.append(p->cell_list[0]);
@@ -843,8 +845,6 @@ void MainWindow::rawDataOutputNewFile(QString rawDataFilePath)
     file.close();
     qDebug() << "write file done";
 }
-
-
 
 void MainWindow::rawDataFinalyCheck(void)
 {

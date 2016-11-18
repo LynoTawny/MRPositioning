@@ -327,7 +327,6 @@ function coordTranslate(allpointinfo, srcType, dstType)
     var tmppoint;
     var points = [];
     var convertor = new BMap.Convertor();
-    var test = "Hello World.";
    
     var pointArray = allpointinfo.split('|');
     
@@ -346,8 +345,9 @@ function coordTranslate(allpointinfo, srcType, dstType)
         points.push(p);
     }
     
-    convertor.translate(points, srcType, dstType, function (data) {
-        alert(data.points);
+    convertor.translate(points, 3, 5, function (data) {
+        alert(points.length);
+        alert(data.status);
         if(data.status === 0) {
             for(var i = 0; i < data.points.length; i++) {
                 resultstr += data.points[i].lng + "," + data.points[i].lat + "|";
